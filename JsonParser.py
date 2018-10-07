@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 import json
-import xlwt
-from pprint import pprint
+import xlsxwriter
+
 
 class EcuFile:
     def __init__(self, file_name, functions):
@@ -15,10 +15,11 @@ class EcuFile:
         self.functions = {}
 
         name = self.file_name.split('-')
-        self.name = name[1][2:] + '-' + name[4][:4]
+        self.name = name[0][4:] + '-' + name[1][2:] + '-' + name[4].split('.')[0]
 
         for address, hashes in functions.items():
             self.functions[address] = hashes[1:-1].split(',')
+
 
 class IndexTable:
     def __init__(self, ecu_file_1, ecu_file_2):
@@ -28,11 +29,14 @@ class IndexTable:
         self.indexes = {}
         self.name = ecu_file_1.name + ' ' + ecu_file_2.name
 
+        print('Created table ' + table.name)
+
     def push_index(self, function_1, function_2, jaccard_index):
         """
         Adds new 'cell' for table
         """
         self.indexes[function_1, function_2] = jaccard_index
+
 
 def _jaccard_index(list_1, list_2):
     """
@@ -44,6 +48,7 @@ def _jaccard_index(list_1, list_2):
     union = len(list_1) + len(list_2) - intersection
 
     return float(intersection) / union
+
 
 def _create_tables(ecu_files):
     """
@@ -67,22 +72,46 @@ def _create_tables(ecu_files):
 
     return tables
 
+
 if __name__ == '__main__':
     ecu_files = []
 
-    with open('test.json') as file:
+    with open('file.json') as file:
         json_data = json.load(file)
 
         for file_name in json_data:
             ecu_files.append(EcuFile(file_name, json_data[file_name]))
 
+    print('Loaded JSON data')
+
     tables = _create_tables(ecu_files)
 
     # Write to Excel sheet
-    book = xlwt.Workbook()
+    book = xlsxwriter.Workbook('Tables.xlsx')
+
+    header_format = book.add_format({'font_color': 'white', 'bg_color': 'black'})
+    green_format = book.add_format({'font_color': 'white', 'bg_color': 'green'})
 
     for table in tables:
-        sheet = book.add_sheet(table.name)
-        sheet.write(1, 0, 'test')
+        sheet = book.add_worksheet(table.name)
+        row = 0
+        col = 0
+        tmp_key = ''
 
-    book.save('Tables_test.xls')
+        print('Added sheet ' + table.name)
+
+        for keys, jaccard_index in table.indexes.items():
+            if keys[0] != tmp_key:
+                tmp_key = keys[0]
+                row = row + 1
+                col = 1
+            else:
+                col = col + 1
+
+            sheet.write(0, col, keys[1], header_format)
+            sheet.write(row, 0, keys[0], header_format)
+            sheet.write(row, col, round(jaccard_index, 2), green_format if jaccard_index == 1 else None)
+
+    book.close()
+
+    print('Wrote values to Tables.xlsx')
