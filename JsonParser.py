@@ -25,15 +25,18 @@ class IndexTable:
     def __init__(self, ecu_file_1, ecu_file_2):
         """
         IndexTable constructor
+        :param ecu_file_1, ecu_file_2: ECU files used for this table
         """
         self.indexes = {}
         self.name = ecu_file_1.name + ' ' + ecu_file_2.name
 
-        print('Created table ' + table.name)
+        print('Created index table ' + self.name)
 
     def push_index(self, function_1, function_2, jaccard_index):
         """
         Adds new 'cell' for table
+        :param function_1, function_2: Header addresses
+        :param jaccard_index: Jaccard Index calculation
         """
         self.indexes[function_1, function_2] = jaccard_index
 
@@ -41,7 +44,7 @@ class IndexTable:
 def _jaccard_index(list_1, list_2):
     """
     Calculate Jaccard Index from two lists
-    :param list_1, list2: Lists to compare
+    :param list_1, list_2: Lists to compare
     :returns: Jaccard Index of list_1 & list_2
     """
     intersection = len(list(set(list_1).intersection(list_2)))
@@ -98,7 +101,7 @@ if __name__ == '__main__':
         col = 0
         tmp_key = ''
 
-        print('Added sheet ' + table.name)
+        print('Added & loading sheet ' + table.name)
 
         for keys, jaccard_index in table.indexes.items():
             if keys[0] != tmp_key:
