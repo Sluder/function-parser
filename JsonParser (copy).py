@@ -4,17 +4,6 @@ import json
 import xlwt
 from pprint import pprint
 
-sensors = {
-    'batt_voltage' : ['0x9a60', '0x9f5b', '0xa166', '0xa307', '0xae2c', '0xd982', '0xe1cd'],
-    'vehicle_speed' : ['0x9be8', '0x9dce', '0xa59d', '0xa9a7', '0xafc6', '0xb5fc', '0xb960'],
-    'engine_speed' : ['0xa59d', '0xa5ec', '0xa9a7', '0xafc6', '0xb5bf', '0xb960', '0xc356'],
-    'water_temp' : ['0x9b46', '0xab56'],
-    'ignition_timing' : ['0xdb1a', '0xda0f'],
-    'airflow' : ['0xddcd'],
-    'throttle_position' : ['0xe1cd'],
-    'knock_correction' : ['0xafc6']
-}
-
 class EcuFile:
     def __init__(self, file_name, functions):
         """
