@@ -1,7 +1,19 @@
 #!/usr/bin/python
 
+import sys
 import json
 import xlsxwriter
+
+sensors = {
+    'batt_voltage': ['0x9a56', '0x9f5b', '0xa166', '0xa307', '-0xae2c', '0xd982', '0xe1cd'],
+    'vehicle_speed': ['0x9be8', '0x9dce', '0xa59d', '0xa9a7', '0xafc6', '0xb5fc', '0xb960'], # 0xb960
+    'engine_speed': ['0xa59d', '0xa5ec', '0xa9a7', '0xafc6', '0xb5bf', '0xb960', '0xc356'],
+    'water_temp': ['0x9b46', '0xab56'],
+    'ignition_timing': ['0xdb1a', '0xda0f'], # 0xdb1a
+    'airflow': ['0xddcd'],
+    'throttle_position': ['0xe1cd'], # 0xe1cd
+    'knock_correction': ['0xafc6']
+}
 
 
 class EcuFile:
@@ -53,7 +65,7 @@ def _jaccard_index(list_1, list_2):
     return float(intersection) / union
 
 
-def _create_tables(ecu_files):
+def _create_tables(control_file, ecu_files):
     """
     Creates comparison tables
     :param ecu_files: List of EcuFile objects
@@ -61,55 +73,75 @@ def _create_tables(ecu_files):
     """
     tables = []
 
-    # Loop through ecu files
-    for key, ecu_file_1 in enumerate(ecu_files):
-        for ecu_file_2 in ecu_files[(key + 1):]:
-            table = IndexTable(ecu_file_1, ecu_file_2)
+    for ecu_file in ecu_files[1:]:
+        table = IndexTable(control_file, ecu_file)
 
-            # Loop through functions in ecu files
-            for function_1, function_1_hashes in ecu_file_1.functions.items():
-                for function_2, function_2_hashes in ecu_file_2.functions.items():
-                    table.push_index(function_1, function_2, _jaccard_index(function_1_hashes, function_2_hashes))
+        # Loop through functions in ecu files
+        for function_1, function_1_hashes in control_file.functions.items():
+            for function_2, function_2_hashes in ecu_file.functions.items():
+                for sensor, addresses in sensors.items():
+                    if function_1 in addresses:
+                        table.push_index(function_1 + ' - ' + sensor, function_2, _jaccard_index(function_1_hashes, function_2_hashes))
+                        break
 
-            tables.append(table)
+        tables.append(table)
 
     return tables
 
 
 if __name__ == '__main__':
     ecu_files = []
+    control_file = None
 
-    with open('file.json') as file:
+    if len(sys.argv) != 3:
+        print('Run \'python JsonParser.py file.json output.xlsx')
+        exit()
+
+    with open(sys.argv[1]) as file:
         json_data = json.load(file)
 
         for file_name in json_data:
-            ecu_files.append(EcuFile(file_name, json_data[file_name]))
+            ecu_file = EcuFile(file_name, json_data[file_name])
+
+            # Pick out control file
+            if ecu_file.name == '27-93-EG33':
+                control_file = ecu_file
+            else:
+                ecu_files.append(ecu_file)
 
     print('Loaded JSON data')
 
-    tables = _create_tables(ecu_files)
+    tables = _create_tables(control_file, ecu_files)
 
     # Write to Excel sheet
-    book = xlsxwriter.Workbook('Tables.xlsx')
+    book = xlsxwriter.Workbook(sys.argv[2])
 
     header_format = book.add_format({'font_color': 'white', 'bg_color': 'black'})
     green_format = book.add_format({'font_color': 'white', 'bg_color': 'green'})
 
     for table in tables:
+        print('Added & loading sheet ' + table.name)
+
         sheet = book.add_worksheet(table.name)
         row = 0
         col = 0
         tmp_key = ''
-
-        print('Added & loading sheet ' + table.name)
+        highest_index = [0, 0, 0]
 
         for keys, jaccard_index in table.indexes.items():
             if keys[0] != tmp_key:
                 tmp_key = keys[0]
                 row = row + 1
                 col = 1
+
+                if highest_index != [0, 0, 0]:
+                    sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': green_format})
+                    highest_index = [0, 0, 0]
             else:
                 col = col + 1
+
+            if jaccard_index >= highest_index[2]:
+                highest_index = [row, col, jaccard_index]
 
             sheet.write(0, col, keys[1], header_format)
             sheet.write(row, 0, keys[0], header_format)
@@ -117,4 +149,5 @@ if __name__ == '__main__':
 
     book.close()
 
-    print('Wrote values to Tables.xlsx')
+    print('\nWrote values to ' + sys.argv[2])
+
