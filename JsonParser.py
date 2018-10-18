@@ -6,12 +6,12 @@ import xlsxwriter
 
 sensors = {
     'batt_voltage': ['0x9a56', '0x9f5b', '0xa166', '0xa307', '-0xae2c', '0xd982', '0xe1cd'],
-    'vehicle_speed': ['0x9be8', '0x9dce', '0xa59d', '0xa9a7', '0xafc6', '0xb5fc', '0xb960'], # 0xb960
+    'vehicle_speed': ['0x9be8', '0x9dce', '0xa59d', '0xa9a7', '0xafc6', '0xb5fc', '0xb960'],
     'engine_speed': ['0xa59d', '0xa5ec', '0xa9a7', '0xafc6', '0xb5bf', '0xb960', '0xc356'],
     'water_temp': ['0x9b46', '0xab56'],
-    'ignition_timing': ['0xdb1a', '0xda0f'], # 0xdb1a
+    'ignition_timing': ['0xdb1a', '0xda0f'],
     'airflow': ['0xddcd'],
-    'throttle_position': ['0xe1cd'], # 0xe1cd
+    'throttle_position': ['0xe1cd'],
     'knock_correction': ['0xafc6']
 }
 
@@ -23,14 +23,19 @@ class EcuFile:
         :param file_name: File name of ECU binary
         :param functions: JSON of function address & block hashes
         """
-        self.file_name = file_name.split('/')[2]
         self.functions = {}
 
-        name = self.file_name.split('-')
+        split = file_name.split('/')
+        name = split[len(split) - 1].split('-')
         self.name = name[0][4:] + '-' + name[1][2:] + '-' + name[4].split('.')[0]
 
         for address, hashes in functions.items():
-            self.functions[address] = hashes[1:-1].split(',')
+            # Clean up hashes
+            hashes = hashes[1:-1].split(',')
+            hashes = [item.replace('\'', '') for item in hashes]
+            hashes = [item.strip(' ') for item in hashes]
+
+            self.functions[address] = hashes
 
 
 class IndexTable:
@@ -59,7 +64,7 @@ def _jaccard_index(list_1, list_2):
     :param list_1, list_2: Lists to compare
     :returns: Jaccard Index of list_1 & list_2
     """
-    intersection = len(list(set(list_1).intersection(list_2)))
+    intersection = len([x for x in list_1 if x in list_2])
     union = len(list_1) + len(list_2) - intersection
 
     return float(intersection) / union
