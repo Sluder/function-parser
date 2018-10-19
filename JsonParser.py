@@ -64,10 +64,10 @@ def _jaccard_index(list_1, list_2):
     :param list_1, list_2: Lists to compare
     :returns: Jaccard Index of list_1 & list_2
     """
-    if len(list_1) > len(list_2):
-        intersection = len([x for x in list_2 if x in list_1])
-    else:
+    if len(list_1) < len(list_2):
         intersection = len([x for x in list_1 if x in list_2])
+    else:
+        intersection = len([x for x in list_2 if x in list_1])
 
     union = len(list_1) + len(list_2) - intersection
 
