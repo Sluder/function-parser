@@ -16,8 +16,8 @@
       <file leaf-file-name="JsonParser.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/JsonParser.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="279">
-              <caret line="68" column="9" lean-forward="true" selection-start-line="68" selection-start-column="9" selection-end-line="68" selection-end-column="9" />
+            <state relative-caret-position="500">
+              <caret line="168" column="33" lean-forward="true" selection-start-line="168" selection-start-column="33" selection-end-line="168" selection-end-column="33" />
               <folding>
                 <element signature="e#19#29#0" expanded="true" />
               </folding>
@@ -28,7 +28,7 @@
       <file leaf-file-name="file.json" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/file.json">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="70008">
+            <state relative-caret-position="42381">
               <caret line="1617" column="30" selection-start-line="1617" selection-end-line="1618" />
             </state>
           </provider>
@@ -86,6 +86,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -106,7 +107,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -170,6 +170,23 @@
     <option name="myLimit" value="2678400000" />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/JsonParser.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1156">
+          <caret line="68" column="9" lean-forward="true" selection-start-line="68" selection-start-column="9" selection-end-line="68" selection-end-column="9" />
+          <folding>
+            <element signature="e#19#29#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/file.json">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="42381">
+          <caret line="1617" column="30" selection-start-line="1617" selection-end-line="1618" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/JsonParser.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1887">
@@ -337,15 +354,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/file.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="70008">
+        <state relative-caret-position="42381">
           <caret line="1617" column="30" selection-start-line="1617" selection-end-line="1618" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/JsonParser.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="279">
-          <caret line="68" column="9" lean-forward="true" selection-start-line="68" selection-start-column="9" selection-end-line="68" selection-end-column="9" />
+        <state relative-caret-position="500">
+          <caret line="168" column="33" lean-forward="true" selection-start-line="168" selection-start-column="33" selection-end-line="168" selection-end-column="33" />
           <folding>
             <element signature="e#19#29#0" expanded="true" />
           </folding>

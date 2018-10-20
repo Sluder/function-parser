@@ -4,6 +4,7 @@ import sys
 import json
 import xlsxwriter
 
+# Predefined functions containing sensor addresses for comparision's
 sensors = {
     'batt_voltage': ['0x9a56', '0x9f5b', '0xa166', '0xa307', '-0xae2c', '0xd982', '0xe1cd'],
     'vehicle_speed': ['0x9be8', '0x9dce', '0xa59d', '0xa9a7', '0xafc6', '0xb5fc', '0xb960'],
@@ -32,8 +33,8 @@ class EcuFile:
         for address, hashes in functions.items():
             # Clean up hashes
             hashes = hashes[1:-1].split(',')
-            hashes = [item.replace('\'', '') for item in hashes]
-            hashes = [item.strip(' ') for item in hashes]
+            hashes = [x.replace('\'', '') for x in hashes]
+            hashes = [x.strip(' ') for x in hashes]
 
             self.functions[address] = hashes
 
@@ -60,7 +61,7 @@ class IndexTable:
 
 def _jaccard_index(list_1, list_2):
     """
-    Calculate Jaccard Index from two lists
+    Calculate Jaccard Index from two lists (Use shortest list as check)
     :param list_1, list_2: Lists to compare
     :returns: Jaccard Index of list_1 & list_2
     """
@@ -106,6 +107,7 @@ if __name__ == '__main__':
         print('Run \'python JsonParser.py file.json output.xlsx')
         exit()
 
+    # Open & parse JSON dump
     with open(sys.argv[1]) as file:
         json_data = json.load(file)
 
@@ -122,12 +124,13 @@ if __name__ == '__main__':
 
     tables = _create_tables(control_file, ecu_files)
 
-    # Write to Excel sheet
+    # Excel setup
     book = xlsxwriter.Workbook(sys.argv[2])
 
     header_format = book.add_format({'font_color': 'white', 'bg_color': 'black'})
     green_format = book.add_format({'font_color': 'white', 'bg_color': 'green'})
 
+    # Write tables to Excel sheet
     for table in tables:
         print('Added & loading sheet ' + table.name)
 
@@ -143,18 +146,30 @@ if __name__ == '__main__':
                 row = row + 1
                 col = 1
 
+                # Highlights highest index in row
                 if highest_index != [0, 0, 0]:
-                    sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': green_format})
+                    sheet.conditional_format(
+                        highest_index[0], highest_index[1], highest_index[0], highest_index[1],
+                        {'type': 'no_errors', 'format': green_format}
+                    )
+
                     highest_index = [0, 0, 0]
             else:
                 col = col + 1
 
+            # Check if encountered higher jaccard index
             if jaccard_index >= highest_index[2]:
                 highest_index = [row, col, jaccard_index]
 
             sheet.write(0, col, keys[1], header_format)
             sheet.write(row, 0, keys[0], header_format)
             sheet.write(row, col, round(jaccard_index, 2), green_format if jaccard_index == 1 else None)
+
+        # Fix highlighting last row
+        sheet.conditional_format(
+            highest_index[0], highest_index[1], highest_index[0], highest_index[1],
+            {'type': 'no_errors', 'format': green_format}
+        )
 
     book.close()
 
