@@ -133,6 +133,7 @@ if __name__ == '__main__':
     # Write tables to Excel sheet
     for table in tables:
         print('Added & loading sheet ' + table.name)
+
         sheet = book.add_worksheet(table.name)
         sheet.freeze_panes(0, 1)
         sheet.set_column(0, 0, 23)
