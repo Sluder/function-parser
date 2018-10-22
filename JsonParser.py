@@ -61,9 +61,9 @@ class IndexTable:
 
 def _jaccard_index(list_1, list_2):
     """
-    Calculate Jaccard Index from two lists (Use shortest list as check)
+    Calculate Jaccard index from two lists (Use shortest list as check)
     :param list_1, list_2: Lists to compare
-    :returns: Jaccard Index of list_1 & list_2
+    :returns: Jaccard index of list_1 & list_2
     """
     if len(list_1) < len(list_2):
         intersection = len([x for x in list_1 if x in list_2])
@@ -133,12 +133,13 @@ if __name__ == '__main__':
     # Write tables to Excel sheet
     for table in tables:
         print('Added & loading sheet ' + table.name)
-
         sheet = book.add_worksheet(table.name)
-        row = 0
-        col = 0
-        tmp_key = ''
+        sheet.freeze_panes(0, 1)
+        sheet.set_column(0, 0, 23)
+
+        row, col = 0, 0
         highest_index = [0, 0, 0]
+        tmp_key = ''
 
         for keys, jaccard_index in table.indexes.items():
             if keys[0] != tmp_key:
@@ -157,8 +158,8 @@ if __name__ == '__main__':
             else:
                 col = col + 1
 
-            # Check if encountered higher jaccard index
-            if jaccard_index >= highest_index[2]:
+            # Check if encountered higher Jaccard index
+            if jaccard_index > highest_index[2]:
                 highest_index = [row, col, jaccard_index]
 
             sheet.write(0, col, keys[1], header_format)
