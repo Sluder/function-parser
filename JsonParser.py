@@ -3,6 +3,7 @@
 import sys
 import json
 import xlsxwriter
+import r2pipe
 
 # Predefined functions containing sensor addresses for comparision's
 sensors = {
@@ -128,7 +129,9 @@ if __name__ == '__main__':
     book = xlsxwriter.Workbook(sys.argv[2])
 
     header_format = book.add_format({'font_color': 'white', 'bg_color': 'black'})
-    green_format = book.add_format({'font_color': 'white', 'bg_color': 'green'})
+    purple_format = book.add_format({'font_color': 'white', 'bg_color': 'purple'})
+    blue_format = book.add_format({'font_color': 'white', 'bg_color': 'blue'})
+    red_format = book.add_format({'font_color': 'white', 'bg_color': 'red'})
 
     # Write tables to Excel sheet
     for table in tables:
@@ -152,7 +155,7 @@ if __name__ == '__main__':
                 if highest_index != [0, 0, 0]:
                     sheet.conditional_format(
                         highest_index[0], highest_index[1], highest_index[0], highest_index[1],
-                        {'type': 'no_errors', 'format': green_format}
+                        {'type': 'no_errors', 'format': purple_format}
                     )
 
                     highest_index = [0, 0, 0]
@@ -165,15 +168,14 @@ if __name__ == '__main__':
 
             sheet.write(0, col, keys[1], header_format)
             sheet.write(row, 0, keys[0], header_format)
-            sheet.write(row, col, round(jaccard_index, 2), green_format if jaccard_index == 1 else None)
+            sheet.write(row, col, round(jaccard_index, 2), purple_format if jaccard_index == 1 else None)
 
         # Fix highlighting last row
         sheet.conditional_format(
             highest_index[0], highest_index[1], highest_index[0], highest_index[1],
-            {'type': 'no_errors', 'format': green_format}
+            {'type': 'no_errors', 'format': purple_format}
         )
 
     book.close()
 
     print('\nWrote values to ' + sys.argv[2])
-
