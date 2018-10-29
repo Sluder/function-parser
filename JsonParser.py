@@ -49,8 +49,15 @@ class IndexTable:
         :param ecu_file_1, ecu_file_2: ECU files used for this table
         """
         self.indexes = OrderedDict()
+        self.tables = OrderedDict()
         self.name = ecu_file_1.name + ' ' + ecu_file_2.name
         self.test_name = ecu_file_2.file_name
+
+        # Custom cell formats
+        self.header_format = book.add_format({'font_color': 'white', 'bg_color': 'black'})
+        self.purple_format = book.add_format({'font_color': 'white', 'bg_color': 'purple'})
+        self.blue_format = book.add_format({'font_color': 'white', 'bg_color': 'blue'})
+        self.red_format = book.add_format({'font_color': 'white', 'bg_color': 'red'})
 
         print('Created index table ' + self.name)
 
@@ -61,6 +68,90 @@ class IndexTable:
         :param jaccard_index: Jaccard Index calculation
         """
         self.indexes[function_1, function_2] = jaccard_index
+
+    def _write_format(self, sheet, highest_index, highest_test):
+        """
+        Format cells with result data
+        :param sheet: Excel sheet to write write results
+        :param highest_index: Highest jaccad index in row
+        :param highest_test: Highest gram compare in row
+        """
+        if highest_test == [0, 0, 0]:
+            print(highest_test)
+            if highest_test[1] == highest_index[1]:
+                sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': self.purple_format})
+            else:
+                sheet.conditional_format(highest_test[0], highest_test[1], highest_test[0], highest_test[1], {'type': 'no_errors', 'format': self.red_format})
+                sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': self.blue_format})
+        else:
+            sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': self.purple_format})
+
+    def write_results(self, book, test_blocks):
+        """
+        Writes all results to Excel sheet
+        :param book: Excel sheet containing result data
+        :param test_blocks: Code blocks to test results with
+        """
+        print('Loading sheet ' + table.name)
+
+        r2 = r2pipe.open('./bins/' + table.test_name)
+        r2.cmd('e asm.arch=m7700')
+
+        sheet = book.add_worksheet(table.name)
+        sheet.freeze_panes(0, 1)
+        sheet.set_column(0, 0, 23)
+
+        row, col = 0, 0
+        highest_index = [0, 0, 0]
+        highest_test = [0, 0, 0]
+        tmp_key = ''
+
+        # Write results to cells
+        for keys, jaccard_index in table.indexes.items():
+            # Switch to new row
+            if keys[0] != tmp_key:
+                tmp_key = keys[0]
+                row = row + 1
+                col = 1
+
+                sheet.write(row, 0, keys[0], self.header_format)
+                if highest_index != [0, 0, 0]:
+                    self._write_format(sheet, highest_index, highest_test)
+
+                highest_test = [0, 0, 0]
+                highest_index = [0, 0, 0]
+            else:
+                col = col + 1
+
+            # Grab function gram for unknown file
+            r2.cmd('s {}'.format(keys[1]))
+            r2.cmd('aaa')
+            ins_json = json.loads(r2.cmd('pdj').replace('\r\n', '').decode('utf-8', 'ignore'), strict=False, object_pairs_hook=OrderedDict)
+
+            function_gram = ''
+            for ins in ins_json:
+                function_gram += ins['opcode'].split(' ')[0].lower()
+            if keys[1] == '0x9e97':
+                print(function_gram)
+
+            # Test if any test_gram exists in current function
+            for gram, address in test_blocks.items():
+                if gram in function_gram:
+                    highest_test = [row, col, 'True']
+                    break
+
+            # Check if encountered higher Jaccard index
+            if jaccard_index > highest_index[2]:
+                highest_index = [row, col, jaccard_index]
+
+            sheet.write(0, col, keys[1], self.header_format)
+            sheet.write(row, col, round(jaccard_index, 2))
+
+        r2.quit()
+
+        self._write_format(sheet, highest_index, highest_test)
+
+        print('\nWrote values to ' + sys.argv[2])
 
 
 def _jaccard_index(list_1, list_2):
@@ -103,98 +194,6 @@ def _create_tables(control_file, ecu_files):
     return tables
 
 
-def _write_results(tables, test_blocks):
-    """
-    Writes all results to Excel sheet
-    :param tables: Tables holding all result data
-    :param test_blocks: Code blocks to test results with
-    """
-    book = xlsxwriter.Workbook(sys.argv[2])
-
-    # Custom cell formats
-    header_format = book.add_format({'font_color': 'white', 'bg_color': 'black'})
-    purple_format = book.add_format({'font_color': 'white', 'bg_color': 'purple'})
-    blue_format = book.add_format({'font_color': 'white', 'bg_color': 'blue'})
-    red_format = book.add_format({'font_color': 'white', 'bg_color': 'red'})
-
-    # Write tables to Excel sheet
-    for table in tables:
-        print('Loading sheet ' + table.name)
-
-        r2 = r2pipe.open('./bins/' + table.test_name)
-        r2.cmd('e asm.arch=m7700')
-
-        sheet = book.add_worksheet(table.name)
-        sheet.freeze_panes(0, 1)
-        sheet.set_column(0, 0, 23)
-
-        row, col = 0, 0
-        highest_index = [0, 0, 0]
-        highest_test = [0, 0, 0]
-        tmp_key = ''
-
-        # Write results to cells
-        for keys, jaccard_index in table.indexes.items():
-            # Switch to new row
-            if keys[0] != tmp_key:
-                tmp_key = keys[0]
-                row = row + 1
-                col = 1
-
-                sheet.write(row, 0, keys[0], header_format)
-
-                # Format cells with result data
-                if highest_test != [0, 0, 0]:
-                    if highest_test[1] == highest_index[1]:
-                        sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': purple_format})
-                    else:
-                        sheet.conditional_format(highest_test[0], highest_test[1], highest_test[0], highest_test[1], {'type': 'no_errors', 'format': red_format})
-                        sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': blue_format})
-                else:
-                    sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': purple_format})
-
-                highest_test = [0, 0, 0]
-                highest_index = [0, 0, 0]
-            else:
-                col = col + 1
-
-            # Grab function gram for unknown file
-            r2.cmd('s ' + keys[1])
-            ins_json = json.loads(r2.cmd('pdj').replace('\r\n', '').decode('utf-8', 'ignore'), strict=False, object_pairs_hook=OrderedDict)
-            function_gram = ''
-
-            for ins in ins_json:
-                function_gram += ins['opcode'].split(' ')[0]
-
-            # Test if any test_gram exists in current function
-            for gram, address in test_blocks.items():
-                if gram in function_gram:
-                    highest_test = [row, col, 'True']
-
-            # Check if encountered higher Jaccard index
-            if jaccard_index > highest_index[2]:
-                highest_index = [row, col, jaccard_index]
-
-            sheet.write(0, col, keys[1], header_format)
-            sheet.write(row, col, round(jaccard_index, 2))
-
-        r2.quit()
-
-        # Format cells with result data
-        if highest_test != [0, 0, 0]:
-            if highest_test[1] == highest_index[1]:
-                sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': purple_format})
-            else:
-                sheet.conditional_format(highest_test[0], highest_test[1], highest_test[0], highest_test[1], {'type': 'no_errors', 'format': red_format})
-                sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': blue_format})
-        else:
-            sheet.conditional_format(highest_index[0], highest_index[1], highest_index[0], highest_index[1], {'type': 'no_errors', 'format': purple_format})
-
-    book.close()
-
-    print('\nWrote values to ' + sys.argv[2])
-
-
 if __name__ == '__main__':
     ecu_files = []
     control_file = None
@@ -222,26 +221,25 @@ if __name__ == '__main__':
 
     with open('blocks.txt') as file:
         gram = ''
-        key = 0
 
-        for line in file:
-            line = line.strip('\n')
+        for line in [x.strip('\n') for x in file]:
+            if not line:
+                continue
 
             if line.startswith('0x'):
+                if gram:
+                    test_blocks[gram] = address
+                    gram = ''
                 address = line
-                key = key + 1
             else:
                 gram += line.split(' ')[0]
 
-            try:
-                line = next(file)
-            except:
-                break
-
-            if not line.strip():
-                test_blocks[gram] = address
-
     print('Loaded JSON data')
 
+    book = xlsxwriter.Workbook(sys.argv[2])
     tables = _create_tables(control_file, ecu_files)
-    _write_results(tables, test_blocks)
+
+    for table in tables:
+        table.write_results(book, test_blocks)
+
+    book.close()
