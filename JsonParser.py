@@ -125,7 +125,9 @@ class IndexTable:
 
             # Grab function gram for unknown file
             r2.cmd('s {}'.format(keys[1]))
-            r2.cmd('aaa')
+            r2.cmd('e anal.bb.maxsize = 0x9999')
+            r2.cmd('af-')
+            r2.cmd('aa')
             ins_json = json.loads(r2.cmd('pdj').replace('\r\n', '').decode('utf-8', 'ignore'), strict=False, object_pairs_hook=OrderedDict)
 
             function_gram = ''
