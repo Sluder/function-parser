@@ -1,0 +1,6 @@
+digraph code {
+	graph [bgcolor=azure fontsize=8 fontname="Courier" splines="ortho"];
+	node [fillcolor=gray style=filled shape=box];
+	edge [arrowhead="normal"];
+ "0x0000b5ee" [fillcolor="lightgray",color="black", fontname="Courier", label=";-- pc:\l(fcn) fcn.0000b5ee 39\l  fcn.0000b5ee ();\l; CALL XREF from fcn.00009087 (0x977c)\l0x0000b5ee      LDA 0x1170 --  m:0 x:0\l0x0000b5f1      LDX ax #0x84c0 --  m:0 x:0\l0x0000b5f4      JSR fcn.00009000 --  m:0 x:0\l0x0000b5f7      PHA\l0x0000b5f8      LDA 0x1073 --  m:0 x:0\l0x0000b5fb      LDX ax #0x8620 --  m:0 x:0\l0x0000b5fe      JSR fcn.00009000 --  m:0 x:0\l0x0000b601      PLB\l0x0000b603      STB 0x100e --  m:0 x:0\l0x0000b607      MPY 0x100e --  m:0 x:0\l0x0000b60b      SEI\l0x0000b60c      STA 0x1056 --  m:0 x:0\l0x0000b60f      STB 0x1057 --  m:0 x:0\l0x0000b613      CLI\l0x0000b614      RTS\l", URL="fcn.0000b5ee/0x0000b5ee"]
+}

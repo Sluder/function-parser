@@ -17,8 +17,8 @@ sensors = {
     'throttle_position': ['0xe1cd'],
     'knock_correction': ['0xafc6']
 }
-
-results = [0, 0]
+# How far left & right to show address range
+hex_margin = 250
 
 class EcuFile:
     def __init__(self, file_name, functions):
@@ -68,7 +68,7 @@ class IndexTable:
         self.header_format = book.add_format({'font_color': 'white', 'bg_color': 'black'})
         self.purple_format = book.add_format({'font_color': 'white', 'bg_color': 'purple'})
         self.blue_format = book.add_format({'font_color': 'white', 'bg_color': 'blue'})
-        self.red_format = book.add_format({'font_color': 'white', 'bg_color': 'red'})
+        self.yellow_format = book.add_format({'font_color': 'black', 'bg_color': 'yellow'})
 
         print('Created index table ' + self.name)
 
@@ -80,31 +80,18 @@ class IndexTable:
         """
         self.indexes[function_1, function_2] = jaccard_index
 
-    def _write_format(self, sheet, highest_index, highest_test):
+    def _write_format(self, sheet, highest_index):
         """
         Format cells with result data
         :param sheet: Excel sheet to write write results
         :param highest_index: Highest jaccad index in row
-        :param highest_test: Highest gram compare in row
         """
-        if highest_index[1] == highest_test[1]:
-            sheet.conditional_format(
-                highest_index[0], highest_index[1], highest_index[0], highest_index[1],
-                {'type': 'no_errors', 'format': self.purple_format}
-            )
-            results[0] = results[0] + 1
-        else:
-            sheet.conditional_format(
-                highest_index[0], highest_index[1], highest_index[0], highest_index[1],
-                {'type': 'no_errors', 'format': self.blue_format}
-            )
-            sheet.conditional_format(
-                highest_test[0], highest_test[1], highest_test[0], highest_test[1],
-                {'type': 'no_errors', 'format': self.red_format}
-            )
-        results[1] = results[1] + 1
+        sheet.conditional_format(
+            highest_index[0], highest_index[1], highest_index[0], highest_index[1],
+            {'type': 'no_errors', 'format': self.blue_format}
+        )
 
-    def write_results(self, book, test_blocks):
+    def write_results(self, book):
         """
         Writes all results to Excel sheet
         :param book: Excel sheet containing result data
@@ -112,19 +99,13 @@ class IndexTable:
         """
         print('Loading sheet ' + table.name)
 
-        r2 = r2pipe.open('./bins/' + table.test_name)
-        r2.cmd('e asm.arch=m7700')
-        r2.cmd('e anal.limits=true')
-        r2.cmd('e anal.from=0x9000')
-        r2.cmd('e anal.to=0xffff')
-
         sheet = book.add_worksheet(table.name)
         sheet.freeze_panes(0, 1)
         sheet.set_column(0, 0, 23)
 
         row, col = 0, 0
         highest_index = [0, 0, 0]
-        highest_test = [0, 0, 0]
+        left_margin, right_margin = 0, 0
         tmp_key = ''
 
         # Write results to cells
@@ -140,43 +121,30 @@ class IndexTable:
                 print('\t Added row {}'.format(keys[0]))
 
                 if highest_index != [0, 0, 0]:
-                    self._write_format(sheet, highest_index, highest_test)
+                    self._write_format(sheet, highest_index)
 
                 highest_index = [0, 0, 0]
-                highest_test = [0, 0, 0]
+
+                # Set address range margins
+                hex_addr = int(keys[0].split(' ')[0], 16)
+                left_margin = hex_addr - hex_margin
+                right_margin = hex_addr + hex_margin
             else:
                 col = col + 1
-
-            # Grab function gram for unknown file
-            r2.cmd('s {}'.format(keys[1]))
-            r2.cmd('af-')
-            r2.cmd('aa')
-
-            try:
-                test_ins = []
-                for ins in json.loads(r2.cmd('pdfj').decode('utf-8', 'ignore'), strict=False, object_pairs_hook=OrderedDict)['ops']:
-                    test_ins.append(ins['opcode'].split(' ')[0].lower())
-            except:
-                col = col - 1
-                continue
-
-            # Calculate Jaccard index for test blocks
-            for opcodes_list, address in test_blocks.items():
-                if address == keys[0].split('-')[0]:
-                    test_index = _jaccard_index(opcodes_list, test_ins)
-                    if test_index > highest_test[2]:
-                        highest_test = [row, col, test_index]
 
             # Check if encountered higher Jaccard index
             if jaccard_index > highest_index[2]:
                 highest_index = [row, col, jaccard_index]
 
+            # Highlight address margins
+            if int(keys[1], 16) >= left_margin and int(keys[1], 16) <= right_margin:
+                sheet.write(row, col, round(jaccard_index, 2), self.yellow_format)
+            else:
+                sheet.write(row, col, round(jaccard_index, 2))
+
             sheet.write(0, col, keys[1], self.header_format)
-            sheet.write(row, col, round(jaccard_index, 2))
 
-        r2.quit()
-
-        self._write_format(sheet, highest_index, highest_test)
+        self._write_format(sheet, highest_index)
 
 
 def _jaccard_index(list_1, list_2):
@@ -212,7 +180,7 @@ def _create_tables(control_file, ecu_files):
                 for sensor, addresses in sensors.items():
                     if function_1 in addresses:
                         table.push_index(
-                            function_1 + '-' + sensor,
+                            function_1 + ' (' + sensor + ')',
                             function_2,
                             _jaccard_index(function_1_hashes, function_2_hashes)
                         )
@@ -242,34 +210,7 @@ if __name__ == '__main__':
             if ecu_file.name == '27-93-EG33':
                 control_file = ecu_file
             else:
-                if 'EG33' in ecu_file.name:
-                    ecu_files.append(ecu_file)
-
-    # Open and format block data
-    test_blocks = OrderedDict()
-
-    with open('blocks.txt') as file:
-        # radare setup
-        r2 = r2pipe.open('./bins/722527-1993-USDM-SVX-EG33.bin')
-        r2.cmd('e asm.arch=m7700')
-        r2.cmd('e anal.limits=true')
-        r2.cmd('e anal.from=0x9000')
-        r2.cmd('e anal.to=0xffff')
-
-        for address in [x.strip('\n') for x in file]:
-            opcodes = []
-
-            r2.cmd('s {}'.format(address))
-            r2.cmd('af-')
-            r2.cmd('aa')
-
-            # Grab opcodes from function
-            for ins in json.loads(r2.cmd('pdfj').decode('utf-8', 'ignore'), strict=False, object_pairs_hook=OrderedDict)['ops']:
-                opcodes.append(ins['opcode'].split(' ')[0].lower())
-
-            test_blocks[tuple(opcodes)] = address
-
-        r2.quit()
+                ecu_files.append(ecu_file)
 
     # Setup Excel sheet
     book = xlsxwriter.Workbook(sys.argv[2])
@@ -277,9 +218,9 @@ if __name__ == '__main__':
 
     # Write all table data to sheets
     for table in tables:
-        table.write_results(book, test_blocks)
+        table.write_results(book)
 
     book.close()
 
     print('\nWrote values to {}\n'.format(sys.argv[2]))
-    print('Final results {}%\n'.format(round((float(results[0]) / results[1]) * 100), 2))
+    # print('Final results {}%\n'.format(round((float(results[0]) / results[1]) * 100), 2))

@@ -1,0 +1,184 @@
+digraph code {
+	graph [bgcolor=azure fontsize=8 fontname="Courier" splines="ortho"];
+	node [fillcolor=gray style=filled shape=box];
+	edge [arrowhead="normal"];
+	"0x0000a1f6" -> "0x0000a1ff" [color="green"];
+	"0x0000a1f6" -> "0x0000a1fb" [color="red"];
+ "0x0000a1f6" [fillcolor="lightgray",color="black", fontname="Courier", label="(fcn) fcn.0000a1f6 480\l  fcn.0000a1f6 ();\l0x0000a1f6      BBC #0x02 $0x4806 0xa1ff --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a1f6"]
+	"0x0000a1fb" -> "0x0000a1ff" [color="blue"];
+ "0x0000a1fb" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #80 $0x4247 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a1fb"]
+	"0x0000a1ff" -> "0x0000a260" [color="green"];
+	"0x0000a1ff" -> "0x0000a204" [color="red"];
+ "0x0000a1ff" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBC #0x04 $0x4068 0xa260 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a1ff"]
+	"0x0000a204" -> "0x0000a260" [color="green"];
+	"0x0000a204" -> "0x0000a20c" [color="red"];
+ "0x0000a204" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDX 0x407c --  m:0 x:0\l     CPX 0x8c67 --  m:0 x:0\l     BCC 0xa260 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a204"]
+	"0x0000a20c" -> "0x0000a213" [color="green"];
+	"0x0000a20c" -> "0x0000a211" [color="red"];
+ "0x0000a20c" [fillcolor="lightgray",color="black", fontname="Courier", label="     CPX 0x8c69 --  m:0 x:0\l     BEQ 0xa213 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a20c"]
+	"0x0000a211" -> "0x0000a237" [color="green"];
+	"0x0000a211" -> "0x0000a213" [color="red"];
+ "0x0000a211" [fillcolor="lightgray",color="black", fontname="Courier", label="     BCS 0xa237 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a211"]
+	"0x0000a213" -> "0x0000a22d" [color="green"];
+	"0x0000a213" -> "0x0000a21c" [color="red"];
+ "0x0000a213" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x41c1 --  m:0 x:0\l     BBS #0x02 $0x4806 0xa22d --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a213"]
+	"0x0000a21c" -> "0x0000a268" [color="green"];
+	"0x0000a21c" -> "0x0000a227" [color="red"];
+ "0x0000a21c" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDX ax #0x41c0 --  m:0 x:0\l     JSR 0xa4ba --  m:0 x:0\l     CMP 0x8c6b --  m:0 x:0\l     BCC 0xa268 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a21c"]
+	"0x0000a227" -> "0x0000a268" [color="blue"];
+ "0x0000a227" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #10 $0x4046 --  m:0 x:0\l     BRA 0xa268 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a227"]
+	"0x0000a22d" -> "0x0000a268" [color="blue"];
+ "0x0000a22d" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x41c0 --  m:0 x:0\l; 0x7fff9d4d9528\l     CLB #10 $0x4046 --  m:0 x:0\l     BRA 0xa268 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a22d"]
+	"0x0000a237" -> "0x0000a264" [color="green"];
+	"0x0000a237" -> "0x0000a240" [color="red"];
+ "0x0000a237" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x41c0 --  m:0 x:0\l     CPX 0x8c6c --  m:0 x:0\l     BCC 0xa264 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a237"]
+	"0x0000a240" -> "0x0000a256" [color="green"];
+	"0x0000a240" -> "0x0000a245" [color="red"];
+ "0x0000a240" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBC #0x02 $0x4806 0xa256 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a240"]
+	"0x0000a245" -> "0x0000a268" [color="green"];
+	"0x0000a245" -> "0x0000a250" [color="red"];
+ "0x0000a245" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDX ax #0x41c1 --  m:0 x:0\l     JSR 0xa4ba --  m:0 x:0\l     CMP 0x8c6e --  m:0 x:0\l     BCC 0xa268 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a245"]
+	"0x0000a250" -> "0x0000a268" [color="blue"];
+ "0x0000a250" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #20 $0x4046 --  m:0 x:0\l     BRA 0xa268 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a250"]
+	"0x0000a256" -> "0x0000a268" [color="blue"];
+ "0x0000a256" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x41c1 --  m:0 x:0\l; 0x7fff9d4d9528\l     CLB #20 $0x4046 --  m:0 x:0\l     BRA 0xa268 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a256"]
+	"0x0000a260" -> "0x0000a264" [color="blue"];
+ "0x0000a260" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x41c0 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a260"]
+	"0x0000a264" -> "0x0000a268" [color="blue"];
+ "0x0000a264" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x41c1 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a264"]
+	"0x0000a268" -> "0x0000a272" [color="green"];
+	"0x0000a268" -> "0x0000a26d" [color="red"];
+ "0x0000a268" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREFS from fcn.0000a1f6 (0xa22b, 0xa235, 0xa254, 0xa25e)\l     BBC #0x30 $0x4046 0xa272 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a268"]
+ "0x0000a26d" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #02 $0x4043 --  m:0 x:0\l     RTS\l", URL="fcn.0000a1f6/0x0000a26d"]
+	"0x0000a272" -> "0x0000a284" [color="green"];
+	"0x0000a272" -> "0x0000a277" [color="red"];
+ "0x0000a272" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDA 0x443c --  m:0 x:0\l     BEQ 0xa284 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a272"]
+	"0x0000a277" -> "0x0000a284" [color="green"];
+	"0x0000a277" -> "0x0000a27c" [color="red"];
+ "0x0000a277" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBS #0x80 $0x4247 0xa284 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a277"]
+	"0x0000a27c" -> "0x0000a36d" [color="green"];
+	"0x0000a27c" -> "0x0000a284" [color="red"];
+ "0x0000a27c" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDX 0x41cb --  m:0 x:0\l     CPX 0x8c40 --  m:0 x:0\l     BCS 0xa36d --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a27c"]
+ "0x0000a284" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     CLB #02 $0x4043 --  m:0 x:0\l     RTS\l", URL="fcn.0000a1f6/0x0000a284"]
+	"0x0000a36d" -> "0x0000a39e" [color="green"];
+	"0x0000a36d" -> "0x0000a381" [color="red"];
+ "0x0000a36d" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDB 0x3000 --  m:0 x:0\l     CLI\l     STA 0x401e --  m:0 x:0\l     STB 0x401f --  m:0 x:0\l     LDX ax #0x4249 --  m:0 x:0\l     BBC #0x01 $0x401e 0xa39e --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a36d"]
+	"0x0000a381" -> "0x0000a394" [color="green"];
+	"0x0000a381" -> "0x0000a386" [color="red"];
+ "0x0000a381" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBC #0x10 $0x401f 0xa394 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a381"]
+	"0x0000a386" -> "0x0000a3ba" [color="green"];
+	"0x0000a386" -> "0x0000a38e" [color="red"];
+ "0x0000a386" [fillcolor="lightgray",color="black", fontname="Courier", label="     JSR 0xa4ba --  m:0 x:0\l     CMP 0x8c24 --  m:0 x:0\l     BCC 0xa3ba --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a386"]
+	"0x0000a38e" -> "0x0000a3ba" [color="blue"];
+ "0x0000a38e" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #01 $0x4248 --  m:0 x:0\l     BRA 0xa3ba --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a38e"]
+	"0x0000a394" -> "0x0000a3ba" [color="blue"];
+ "0x0000a394" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x4249 --  m:0 x:0\l; 0x7fff9d4d9528\l     CLB #01 $0x4248 --  m:0 x:0\l     BRA 0xa3ba --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a394"]
+	"0x0000a39e" -> "0x0000a3b2" [color="green"];
+	"0x0000a39e" -> "0x0000a3a3" [color="red"];
+ "0x0000a39e" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBS #0x10 $0x401f 0xa3b2 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a39e"]
+	"0x0000a3a3" -> "0x0000a3ba" [color="green"];
+	"0x0000a3a3" -> "0x0000a3ac" [color="red"];
+ "0x0000a3a3" [fillcolor="lightgray",color="black", fontname="Courier", label="     INX\l     JSR 0xa4ba --  m:0 x:0\l     CMP 0x8c24 --  m:0 x:0\l     BCC 0xa3ba --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3a3"]
+	"0x0000a3ac" -> "0x0000a3ba" [color="blue"];
+ "0x0000a3ac" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #10 $0x4248 --  m:0 x:0\l     BRA 0xa3ba --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3ac"]
+	"0x0000a3b2" -> "0x0000a3ba" [color="blue"];
+ "0x0000a3b2" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x424a --  m:0 x:0\l; 0x7fff9d4d9528\l     CLB #10 $0x4248 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3b2"]
+	"0x0000a3ba" -> "0x0000a3c5" [color="green"];
+	"0x0000a3ba" -> "0x0000a3bf" [color="red"];
+ "0x0000a3ba" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREFS from fcn.0000a1f6 (0xa392, 0xa39c, 0xa3b0)\l     BBC #0x11 $0x4248 0xa3c5 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3ba"]
+	"0x0000a3bf" -> "0x0000a3c9" [color="blue"];
+ "0x0000a3bf" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #08 $0x4043 --  m:0 x:0\l     BRA 0xa3c9 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3bf"]
+	"0x0000a3c5" -> "0x0000a3c9" [color="blue"];
+ "0x0000a3c5" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     CLB #08 $0x4043 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3c5"]
+	"0x0000a3c9" -> "0x0000a3ee" [color="green"];
+	"0x0000a3c9" -> "0x0000a3d1" [color="red"];
+ "0x0000a3c9" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREF from fcn.0000a1f6 (0xa3c3)\l     LDX ax #0x424b --  m:0 x:0\l     BBC #0x02 $0x401e 0xa3ee --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3c9"]
+	"0x0000a3d1" -> "0x0000a3e4" [color="green"];
+	"0x0000a3d1" -> "0x0000a3d6" [color="red"];
+ "0x0000a3d1" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBC #0x20 $0x401f 0xa3e4 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3d1"]
+	"0x0000a3d6" -> "0x0000a40a" [color="green"];
+	"0x0000a3d6" -> "0x0000a3de" [color="red"];
+ "0x0000a3d6" [fillcolor="lightgray",color="black", fontname="Courier", label="     JSR 0xa4ba --  m:0 x:0\l     CMP 0x8c25 --  m:0 x:0\l     BCC 0xa40a --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3d6"]
+	"0x0000a3de" -> "0x0000a40a" [color="blue"];
+ "0x0000a3de" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #02 $0x4248 --  m:0 x:0\l     BRA 0xa40a --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3de"]
+	"0x0000a3e4" -> "0x0000a40a" [color="blue"];
+ "0x0000a3e4" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x424b --  m:0 x:0\l; 0x7fff9d4d9528\l     CLB #02 $0x4248 --  m:0 x:0\l     BRA 0xa40a --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3e4"]
+	"0x0000a3ee" -> "0x0000a402" [color="green"];
+	"0x0000a3ee" -> "0x0000a3f3" [color="red"];
+ "0x0000a3ee" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBS #0x20 $0x401f 0xa402 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3ee"]
+	"0x0000a3f3" -> "0x0000a40a" [color="green"];
+	"0x0000a3f3" -> "0x0000a3fc" [color="red"];
+ "0x0000a3f3" [fillcolor="lightgray",color="black", fontname="Courier", label="     INX\l     JSR 0xa4ba --  m:0 x:0\l     CMP 0x8c25 --  m:0 x:0\l     BCC 0xa40a --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3f3"]
+	"0x0000a3fc" -> "0x0000a40a" [color="blue"];
+ "0x0000a3fc" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #20 $0x4248 --  m:0 x:0\l     BRA 0xa40a --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a3fc"]
+	"0x0000a402" -> "0x0000a40a" [color="blue"];
+ "0x0000a402" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x424c --  m:0 x:0\l; 0x7fff9d4d9528\l     CLB #20 $0x4248 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a402"]
+	"0x0000a40a" -> "0x0000a415" [color="green"];
+	"0x0000a40a" -> "0x0000a40f" [color="red"];
+ "0x0000a40a" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREFS from fcn.0000a1f6 (0xa3e2, 0xa3ec, 0xa400)\l     BBC #0x22 $0x4248 0xa415 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a40a"]
+	"0x0000a40f" -> "0x0000a419" [color="blue"];
+ "0x0000a40f" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #10 $0x4043 --  m:0 x:0\l     BRA 0xa419 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a40f"]
+	"0x0000a415" -> "0x0000a419" [color="blue"];
+ "0x0000a415" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     CLB #10 $0x4043 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a415"]
+	"0x0000a419" -> "0x0000a43e" [color="green"];
+	"0x0000a419" -> "0x0000a421" [color="red"];
+ "0x0000a419" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREF from fcn.0000a1f6 (0xa413)\l     LDX ax #0x424d --  m:0 x:0\l     BBC #0x04 $0x401e 0xa43e --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a419"]
+	"0x0000a421" -> "0x0000a434" [color="green"];
+	"0x0000a421" -> "0x0000a426" [color="red"];
+ "0x0000a421" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBC #0x40 $0x401f 0xa434 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a421"]
+	"0x0000a426" -> "0x0000a45a" [color="green"];
+	"0x0000a426" -> "0x0000a42e" [color="red"];
+ "0x0000a426" [fillcolor="lightgray",color="black", fontname="Courier", label="     JSR 0xa4ba --  m:0 x:0\l     CMP 0x8c26 --  m:0 x:0\l     BCC 0xa45a --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a426"]
+	"0x0000a42e" -> "0x0000a45a" [color="blue"];
+ "0x0000a42e" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #04 $0x4248 --  m:0 x:0\l     BRA 0xa45a --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a42e"]
+	"0x0000a434" -> "0x0000a45a" [color="blue"];
+ "0x0000a434" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x424d --  m:0 x:0\l; 0x7fff9d4d9528\l     CLB #04 $0x4248 --  m:0 x:0\l     BRA 0xa45a --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a434"]
+	"0x0000a43e" -> "0x0000a452" [color="green"];
+	"0x0000a43e" -> "0x0000a443" [color="red"];
+ "0x0000a43e" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBS #0x40 $0x401f 0xa452 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a43e"]
+	"0x0000a443" -> "0x0000a45a" [color="green"];
+	"0x0000a443" -> "0x0000a44c" [color="red"];
+ "0x0000a443" [fillcolor="lightgray",color="black", fontname="Courier", label="     INX\l     JSR 0xa4ba --  m:0 x:0\l     CMP 0x8c26 --  m:0 x:0\l     BCC 0xa45a --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a443"]
+	"0x0000a44c" -> "0x0000a45a" [color="blue"];
+ "0x0000a44c" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #40 $0x4248 --  m:0 x:0\l     BRA 0xa45a --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a44c"]
+	"0x0000a452" -> "0x0000a45a" [color="blue"];
+ "0x0000a452" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x424e --  m:0 x:0\l; 0x7fff9d4d9528\l     CLB #40 $0x4248 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a452"]
+	"0x0000a45a" -> "0x0000a465" [color="green"];
+	"0x0000a45a" -> "0x0000a45f" [color="red"];
+ "0x0000a45a" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREFS from fcn.0000a1f6 (0xa432, 0xa43c, 0xa450)\l     BBC #0x44 $0x4248 0xa465 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a45a"]
+	"0x0000a45f" -> "0x0000a469" [color="blue"];
+ "0x0000a45f" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #20 $0x4043 --  m:0 x:0\l     BRA 0xa469 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a45f"]
+	"0x0000a465" -> "0x0000a469" [color="blue"];
+ "0x0000a465" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     CLB #20 $0x4043 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a465"]
+	"0x0000a469" -> "0x0000a48e" [color="green"];
+	"0x0000a469" -> "0x0000a471" [color="red"];
+ "0x0000a469" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREF from fcn.0000a1f6 (0xa463)\l     LDX ax #0x424f --  m:0 x:0\l     BBC #0x08 $0x401e 0xa48e --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a469"]
+	"0x0000a471" -> "0x0000a484" [color="green"];
+	"0x0000a471" -> "0x0000a476" [color="red"];
+ "0x0000a471" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBC #0x80 $0x401f 0xa484 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a471"]
+	"0x0000a476" -> "0x0000a4aa" [color="green"];
+	"0x0000a476" -> "0x0000a47e" [color="red"];
+ "0x0000a476" [fillcolor="lightgray",color="black", fontname="Courier", label="     JSR 0xa4ba --  m:0 x:0\l     CMP 0x8c27 --  m:0 x:0\l     BCC 0xa4aa --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a476"]
+	"0x0000a47e" -> "0x0000a4aa" [color="blue"];
+ "0x0000a47e" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #08 $0x4248 --  m:0 x:0\l     BRA 0xa4aa --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a47e"]
+	"0x0000a484" -> "0x0000a4aa" [color="blue"];
+ "0x0000a484" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x424f --  m:0 x:0\l; 0x7fff9d4d9528\l     CLB #08 $0x4248 --  m:0 x:0\l     BRA 0xa4aa --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a484"]
+	"0x0000a48e" -> "0x0000a4a2" [color="green"];
+	"0x0000a48e" -> "0x0000a493" [color="red"];
+ "0x0000a48e" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBS #0x80 $0x401f 0xa4a2 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a48e"]
+	"0x0000a493" -> "0x0000a4aa" [color="green"];
+	"0x0000a493" -> "0x0000a49c" [color="red"];
+ "0x0000a493" [fillcolor="lightgray",color="black", fontname="Courier", label="     INX\l     JSR 0xa4ba --  m:0 x:0\l     CMP 0x8c27 --  m:0 x:0\l     BCC 0xa4aa --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a493"]
+	"0x0000a49c" -> "0x0000a4aa" [color="blue"];
+ "0x0000a49c" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #80 $0x4248 --  m:0 x:0\l     BRA 0xa4aa --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a49c"]
+	"0x0000a4a2" -> "0x0000a4aa" [color="blue"];
+ "0x0000a4a2" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDM #00 $0x4250 --  m:0 x:0\l; 0x7fff9d4d9528\l     CLB #80 $0x4248 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a4a2"]
+	"0x0000a4aa" -> "0x0000a4b5" [color="green"];
+	"0x0000a4aa" -> "0x0000a4af" [color="red"];
+ "0x0000a4aa" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREFS from fcn.0000a1f6 (0xa482, 0xa48c, 0xa4a0)\l     BBC #0x88 $0x4248 0xa4b5 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a4aa"]
+	"0x0000a4af" -> "0x0000a4b9" [color="blue"];
+ "0x0000a4af" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     SEB #40 $0x4043 --  m:0 x:0\l     BRA 0xa4b9 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a4af"]
+	"0x0000a4b5" -> "0x0000a4b9" [color="blue"];
+ "0x0000a4b5" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7fff9d4d9528\l     CLB #40 $0x4043 --  m:0 x:0\l", URL="fcn.0000a1f6/0x0000a4b5"]
+ "0x0000a4b9" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREF from fcn.0000a1f6 (0xa4b3)\l     RTS\l", URL="fcn.0000a1f6/0x0000a4b9"]
+}
