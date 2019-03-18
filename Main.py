@@ -4,10 +4,34 @@ import os
 import sys
 import json
 import r2pipe
+from collections import OrderedDict
+
 
 class EcuFile:
-	def __init__(self):
-		pass
+	def __init__(self, filename):
+		self.functions = {}
+		self.filename = filename
+
+		r2 = r2pipe.open('./bins/' + filename)
+		r2.cmd('e asm.arch=m7700')
+		r2.cmd('e anal.limits=true')
+		r2.cmd('e anal.from=0x9000')
+		r2.cmd('e anal.to=0xffff')
+		r2.cmd('aaa')
+
+		functions_json = json.loads(r2.cmd('aflj').replace('\r\n', '').decode('utf-8', 'ignore'))
+
+		for json_obj in functions_json:
+			self.functions[json_obj['offset']] = Function(json_obj, r2)
+
+		r2.quit()
+
+		print('Created ECU {}'.format(filename))
+
+	def to_string(self):
+		for address in self.functions:
+			print('\t' + hex(address))
+
 
 class Function:
 	def __init__(self, json_obj, r2):
@@ -25,8 +49,7 @@ class Function:
 			for function_reference in json_obj['callrefs']:
 				self.references.append(function_reference['addr'])
 
-		self.analyze(r2)
-		self.hashes = self.get_hash()
+		#self.analyze(r2)
 
 	def analyze(self, r2):
 		"""
@@ -39,16 +62,6 @@ class Function:
 		for block_json in blocks_json:
 			self.blocks[block_json['offset']] = Block(block_json, r2)
 
-	def get_hash(self):
-		"""
-		Gets whole hash from function blocks
-		"""
-		hashes = []
-
-		for offset, block in self.blocks.items():
-			hashes.append(block.hash)
-
-		return hashes
 
 class Block:
 	def __init__(self, json_obj, r2):
@@ -57,7 +70,6 @@ class Block:
 		json_obj: JSON representation of function block
 		r2: radare2 instance
 		"""
-		self.instructions = []
 		self.json = json_obj
 
 		# 'true' and 'false' edges exist
@@ -74,62 +86,30 @@ class Block:
 			self.jmp_false = None
 
 		self.analyze(r2)
-		self.hash = self.get_hash()
 
-	def analyze(self, r2):
-		"""
-		Further analyze function block for instructions/edges
-		r2: radare2 instance
-		"""
-		for instruction_json in self.json['ops']:
-			 self.instructions.append(Instruction(instruction_json))
-
-	def get_hash(self):
-		"""
-		Gets hash of all block instructions opcodes
-		"""
-		opcodes = ''
-
-		for instruction in self.instructions:
-			opcodes += instruction.opcode + '-'
-
-		return hash(opcodes)
-
-class Instruction:
-	def __init__(self, json_obj):
-		"""
-		Instruction class constructor
-		json_obj: JSON representation of instruction
-		"""
-		self.opcode = json_obj['opcode'].split()[0]
-		self.address = json_obj['offset']
 
 if __name__ == '__main__':
 	"""
 	Main function
 	"""
-	functions = {}
-	r2 = None
+	ecu_files = {}
 
-	try:
-		#TODO : support multiple files
-		# Ensure file exists, radare doesn't check
-		if not os.path.exists(sys.argv[1]):
-			raise IOError()
-
-		r2 = r2pipe.open(sys.argv[1], flags=['-2'])
-	except IndexError:
-		print('[error] No binary specified')
-	except IOError:
-		print('[error] Unable to open {}'.format(sys.argv[1]))
-
-	r2.cmd('e asm.arch=m7700')
-	r2.cmd('aaa')
-
-	functions_json = json.loads(r2.cmd('aflj'))
-
-	# Format JSON dump
-	for json_obj in functions_json:
-		functions[json_obj['offset']] = Function(json_obj, r2)
-
-	r2.quit()
+	for filename in os.listdir('./bins'):
+		if filename == '722527-1993-USDM-SVX-EG33.bin':
+			ecu_files[filename] = EcuFile(filename)
+			ecu_files[filename].to_string()
+	# functions = {}
+	# r2 = None
+	#
+	#
+	#
+	# r2.cmd('e asm.arch=m7700')
+	# r2.cmd('aaa')
+	#
+	# functions_json = json.loads(r2.cmd('aflj'))
+	#
+	# # Format JSON dump
+	# for json_obj in functions_json:
+	# 	functions[json_obj['offset']] = Function(json_obj, r2)
+	#
+	# r2.quit()

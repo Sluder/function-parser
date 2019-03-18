@@ -1,0 +1,42 @@
+digraph code {
+	graph [bgcolor=azure fontsize=8 fontname="Courier" splines="ortho"];
+	node [fillcolor=gray style=filled shape=box];
+	edge [arrowhead="normal"];
+	"0x0000a3a2" -> "0x0000a3ac" [color="green"];
+	"0x0000a3a2" -> "0x0000a3a7" [color="red"];
+ "0x0000a3a2" [fillcolor="lightgray",color="black", fontname="Courier", label="(fcn) fcn.0000a3a2 96\l  fcn.0000a3a2 ();\l; CALL XREF from fcn.0000973b (0x9a20)\l     BBC #0x04 $0x804a 0xa3ac --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3a2"]
+	"0x0000a3a7" -> "0x0000a3b9" [color="green"];
+	"0x0000a3a7" -> "0x0000a3ac" [color="red"];
+ "0x0000a3a7" [fillcolor="lightgray",color="black", fontname="Courier", label="     BBC #0x01 $0x105b 0xa3b9 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3a7"]
+ "0x0000a3ac" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREF from fcn.0000a3a2 (0xa3a2)\l; 0x7ffeb87ef058\l     CLB #01 $0x1029 --  m:0 x:0\l; 0x7ffeb87ef058\l     CLB #01 $0x12bc --  m:0 x:0\l; 0x7ffeb87ef058\l     CLB #01 $0x12c0 --  m:0 x:0\l     RTS\l", URL="fcn.0000a3a2/0x0000a3ac"]
+	"0x0000a3b9" -> "0x0000a3d8" [color="green"];
+	"0x0000a3b9" -> "0x0000a3c4" [color="red"];
+ "0x0000a3b9" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREF from fcn.0000a3a2 (0xa3a7)\l     LDA 0x1088 --  m:0 x:0\l     LDX 0x1038 --  m:0 x:0\l     BBC #0x40 $0x119d 0xa3d8 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3b9"]
+	"0x0000a3c4" -> "0x0000a3e4" [color="green"];
+	"0x0000a3c4" -> "0x0000a3c9" [color="red"];
+ "0x0000a3c4" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREF from fcn.0000a214 (0xa2e0)\l     CMP 0x8a8c --  m:0 x:0\l     BCC 0xa3e4 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3c4"]
+	"0x0000a3c9" -> "0x0000a3e4" [color="green"];
+	"0x0000a3c9" -> "0x0000a3d1" [color="red"];
+ "0x0000a3c9" [fillcolor="lightgray",color="black", fontname="Courier", label="     LDA 0x106e --  m:0 x:0\l     CMP 0x8a94 --  m:0 x:0\l     BCC 0xa3e4 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3c9"]
+	"0x0000a3d1" -> "0x0000a3e9" [color="green"];
+	"0x0000a3d1" -> "0x0000a3d6" [color="red"];
+ "0x0000a3d1" [fillcolor="lightgray",color="black", fontname="Courier", label="     CPX 0x8ab2 --  m:0 x:0\l     BCS 0xa3e9 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3d1"]
+	"0x0000a3d6" -> "0x0000a3f9" [color="blue"];
+ "0x0000a3d6" [fillcolor="lightgray",color="black", fontname="Courier", label="     BRA 0xa3f9 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3d6"]
+	"0x0000a3d8" -> "0x0000a3e4" [color="green"];
+	"0x0000a3d8" -> "0x0000a3dd" [color="red"];
+ "0x0000a3d8" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREF from fcn.0000a214 (0xa3bf)\l     CMP 0x8ab9 --  m:0 x:0\l     BCS 0xa3e4 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3d8"]
+	"0x0000a3dd" -> "0x0000a3e9" [color="green"];
+	"0x0000a3dd" -> "0x0000a3e2" [color="red"];
+ "0x0000a3dd" [fillcolor="lightgray",color="black", fontname="Courier", label="     CPX 0x8ab0 --  m:0 x:0\l     BCC 0xa3e9 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3dd"]
+	"0x0000a3e2" -> "0x0000a3f9" [color="blue"];
+ "0x0000a3e2" [fillcolor="lightgray",color="black", fontname="Courier", label="     BRA 0xa3f9 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3e2"]
+ "0x0000a3e4" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREFS from fcn.0000a214 (0xa3c7, 0xa3cf, 0xa3db)\l     LDM #00 $0x11b1 --  m:0 x:0\l     RTS\l", URL="fcn.0000a3a2/0x0000a3e4"]
+	"0x0000a3e9" -> "0x0000a3f8" [color="green"];
+	"0x0000a3e9" -> "0x0000a3f4" [color="red"];
+ "0x0000a3e9" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREFS from fcn.0000a214 (0xa3d4, 0xa3e0)\l     LDX ax #0x11b1 --  m:0 x:0\l     JSR fcn.000099df --  m:0 x:0\l     CMP 0x8a9d --  m:0 x:0\l     BCC 0xa3f8 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3e9"]
+	"0x0000a3f4" -> "0x0000a3f8" [color="blue"];
+ "0x0000a3f4" [fillcolor="lightgray",color="black", fontname="Courier", label="; 0x7ffeb87ef058\l     SEB #01 $0x1029 --  m:0 x:0\l", URL="fcn.0000a3a2/0x0000a3f4"]
+ "0x0000a3f8" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREF from fcn.0000a214 (0xa3f2)\l     RTS\l", URL="fcn.0000a3a2/0x0000a3f8"]
+ "0x0000a3f9" [fillcolor="lightgray",color="black", fontname="Courier", label="; CODE XREFS from fcn.0000a214 (0xa3d6, 0xa3e2)\l     LDM #00 $0x11b1 --  m:0 x:0\l; 0x7ffeb87ef058\l     CLB #01 $0x1029 --  m:0 x:0\l     RTS\l", URL="fcn.0000a3a2/0x0000a3f9"]
+}
