@@ -1,0 +1,34 @@
+r2.cmd('s 0x{}'.format(self.fvector_location))
+        r2.cmd('aa')
+
+        instructions = json.loads(r2.cmd('pdfj').replace('\r\n', '').decode('utf-8', 'ignore'), strict=False)
+        instructions = instructions['ops']
+        calls = []
+        stores = 0
+        watch = False
+        finssh = False
+        self.healthcheck = 0x0000
+
+        for i, ins in enumerate(instructions):
+            split = ins['opcode'].split(' ')
+
+            if not watch:
+                if split[0] == 'STA':
+                    stores = stores + 1
+                else:
+                    stores = 0
+
+                if stores >= 8:
+                    watch = True
+            else:
+                if split[0] == 'JSR':
+                    calls.append(split)
+                elif len(calls) > 5:
+                    break
+                else:
+                    calls.clear()
+                    continue
+
+        self.healthcheck = calls[0][1]
+        self.fvector_calls = len(calls)
+        self.fvector_jmps = calls
