@@ -6,13 +6,10 @@ import json
 import md5
 from collections import OrderedDict, Counter
 
-clusters = {}
-
-control_bins = {
-    "EG33" : "722527-1993-USDM-SVX-EG33.bin",
-    "EJ22" : "703243-1991-EDM-Legacy-EJ22.bin",
-    "EJ20T" : "74401A-1995-JDM-WrxRA-EJ20T.bin",
-    "EJ18" : "753C21-1995-USDM-Impreza-EJ18.bin"
+CONTROL_BINS = {
+    "722527-1993-USDM-SVX-EG33.bin" : None,
+    "703243-1991-EDM-Legacy-EJ22.bin" : None,
+    "74401A-1995-JDM-WrxRA-EJ20T.bin" : None
 }
 
 class Instruction:
@@ -81,37 +78,18 @@ class CFG:
 
 
 class EcuFile:
-    rom_id_locations = {
-        'eg33' : '0x8c3d',
-        'ej15' : '0x73c4',
-        'ej18' : '0xc8f1',
-        'ej20T' : '0x8eb0',
-        'ej20' : '0x4eb0',
-        'ej22' : '0x8ddc'
-    }
-
     def __init__(self, file_name, r2):
         self.filename = filename
+
+        split = file_name.split('/')
+        name = split[len(split) - 1].split('-')
+        self.name = name[0][4:] + '-' + name[1][2:] + '-' + name[4].split('.')[0]
 
         self.get_rvector_location(r2)
         self.get_rvector_calls(r2)
 
         healthcheck = Counter(self.rvector_jmps).most_common(1)
         self.healthcheck = healthcheck[0][0] if healthcheck else "?"
-
-    def get_id_location(self, r2):
-        """
-        Get a guess of the addr location of the bin's ROM ID
-        """
-        for bin_type, location in self.rom_id_locations.items():
-            r2.cmd('s {}'.format(location))
-            id = r2.cmd('px0')
-
-            if id[:1] == '7':
-                self.rom_id = id[:6]
-                self.bin_type = bin_type
-                self.id_location = location
-                break
 
     def get_rvector_location(self, r2):
         """
@@ -165,7 +143,7 @@ class EcuFile:
     def __str__(self):
         pass
 
-def _jaccard_index(list_1, list_2):
+def jaccard_index(list_1, list_2):
     """
     Calculate Jaccard index from two lists (Use shortest list as check)
     :param list_1, list_2: Lists to compare
@@ -180,7 +158,7 @@ def _jaccard_index(list_1, list_2):
 
     return float(intersection) / union
 
-def _parse_bin(filename, r2):
+def parse_bin(filename, r2):
     """
     Helper to parse a bin file and get the CFG for the reset vector
     :returns: EcuFile instance
@@ -217,56 +195,41 @@ def _parse_bin(filename, r2):
     return ecu
 
 if __name__ == '__main__':
-    clusters = {
-        "EG33" : [],
-        "EJ22" : [],
-        "EJ20T" : [],
-        "EJ18" : []
-    }
+    clusters = {}
 
-    # Setup bins everything else compares to
-    controls = []
-    for type, filename in control_bins.items():
+    # Setup control bins
+    for filename, _ in CONTROL_BINS.items():
         r2 = r2pipe.open('./bins/' + filename)
-        ecu = _parse_bin(filename, r2)
-        ecu.type = type
+        CONTROL_BINS[filename] = parse_bin(filename, r2)
+        clusters[filename] = []
 
-        controls.append(ecu)
-
-        print("Created control for {}".format(type))
+        print("Created control for {}".format(filename))
 
     # Setup unknown bins
-    ecu_bins = {}
-    for filename in os.listdir('./bins'):
-        r2 = r2pipe.open('./bins/' + filename)
-        ecu_bins[filename] = _parse_bin(filename, r2)
+    for filename_1 in os.listdir('./bins'):
+        r2 = r2pipe.open('./bins/' + filename_1)
+        ecu = parse_bin(filename_1, r2)
 
-        print("Parsed {}".format(filename))
+        highest_value = 0
+        highest_control = None
 
-    # Compare all bins with control bins
-    for filename, ecu in ecu_bins.items():
-        type = ""
-        jaccard_value = 0
-        healthcheck_value = 0
+        for filename_2, control in CONTROL_BINS.items():
+            value = jaccard_index(ecu.rvector_hashes, control.rvector_hashes)
 
-        for control in controls:
-            value = _jaccard_index(ecu.rvector_hashes, control.rvector_hashes)
+            if value > highest_value:
+                highest_value = value
+                highest_control = filename_2
 
-            if value >= jaccard_value:
-                type = control.type
-                jaccard_value = value
-                healthcheck_value = _jaccard_index(ecu.healthcheck_hashes, control.healthcheck_hashes)
+        clusters[highest_control].append(filename_1)
 
-        clusters[type].append("{} - RV_JD: {:.2f} - RV: 0x{} - HC: 0x{} - HC_JD: {:.2f}".format(
-            ecu.filename, jaccard_value, ecu.rvector_location, ecu.healthcheck, healthcheck_value
-        ))
+        print("Parsed {}".format(filename_1))
 
     # Output clustering results
-    for bin_type, ecu_list in clusters.items():
-        print(bin_type)
+    for control, bins in clusters.items():
+        print(control)
 
-        if not ecu_list:
-            print("\t None")
-        else:
-            for ecu in ecu_list:
-                print("\t {}".format(ecu))
+        for bin in bins:
+            print("\t{}".format(bin))
+
+    with open('clusters.json', 'w') as file:
+        json.dump(clusters, file)
