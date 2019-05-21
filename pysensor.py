@@ -524,7 +524,6 @@ def isHex(num):
         return False
 
 def load_sensors(fn, sensor_list):
-
     ra2 = r2pipe.open(fn, ["-2"])
 
     if (ra2):
@@ -614,11 +613,6 @@ def get_sensor_val(val, control, test, all_control_features, args):
 
     return ret
 
-
-def _levenshtein(feature_set_1, feature_set_2):
-    ret = 0
-    return ret
-
 # helper method to quickly convert our file names into a more consise format
 # this format is used in JSONParser as the names for the excel spreadsheets
 def _json_parser_format(infile):
@@ -686,7 +680,7 @@ def main ():
 
     parser = argparse.ArgumentParser(description='Import and process M7700 JSON Graph files.')
 
-    parser.add_argument('filename', metavar='filename', nargs='?', default='{}/fcg_maxes.json'.format(file_dir), type=str, help='M7700 ROM file for parsing')
+    parser.add_argument('filename', metavar='filename', nargs='?', default='file.json', type=str, help='M7700 ROM file for parsing')
     parser.add_argument('-s', '--settings', metavar='settings', default="parser_settings.json", type=str, help='Specify Settings Filename')
     parser.add_argument('-l', '--long-output', metavar='long-output', default="parser_settings.json", type=str, help='Extended JSON Output (contains feature vectors)')
     parser.add_argument('-o', '--output', action='store_true', help='Output M7700 rom to file')
