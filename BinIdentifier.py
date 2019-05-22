@@ -4,6 +4,7 @@ import r2pipe
 import os
 import json
 import md5
+import xlsxwriter
 from collections import OrderedDict, Counter
 
 # List control binaries for clustering
@@ -241,10 +242,8 @@ class Cfg:
             il = blk.instructions
             feature_visited.append(blk)
             for instr in il.items():
-                #if (((u'STA' in instr[1].opcode or u'STB' in instr[1].opcode or instr[1].opcode == u'LDA') or (instr[1].opcode == u'LDB')) and not ("al" in instr[1].params[0] or "bl" in instr[1].params[0]  or "ax" in instr[1].params[0] or "bx" in instr[1].params[0] or "xl" in instr[1].params[0] or "yl" in instr[1].params[0])):
                 try:
                     for param in instr[1].params:
-
                         if param not in features.keys() and "0x" in param and "#" not in param and "$" not in param:
                             if int(param, 16) < 0x6000:
                                 features[ur"{}".format(param)] = self.gen_features(instr, blk)
@@ -297,13 +296,13 @@ class Function:
 
     def get_features(self):
         global feature_visited
-        feature_visited = list()
+        feature_visited = []
 
         return self.cfg.get_feature(self.cfg.first)
 
     def get_ctrl_features(self, sensor):
         global feature_visited
-        feature_visited = list()
+        feature_visited = []
 
         return self.cfg.get_ctrl_feature(self.cfg.first, sensor)
 
@@ -448,23 +447,20 @@ def cluster_bins():
     """
     Cluster unknown binaries based on the controls
     """
-    for filename_1 in os.listdir('./bins'):
-        r2 = r2pipe.open('./bins/' + filename_1)
-        ecu = EcuFile(filename_1, r2)
+    matrix = []
+    bins = []
 
-        highest_value = 0
-        highest_control = None
+    for filename in os.listdir("./bins"):
+        r2 = r2pipe.open("./bins/{}".format(filename))
+        bins.append(EcuFile(filename, r2))
 
-        for filename_2, control in control_bins.items():
+    for ecu_1 in bins:
+        for ecu_2 in bins:
             value = jaccard_index(ecu.rvector_hashes, control.rvector_hashes)
 
-            if value > highest_value:
-                highest_value = value
-                highest_control = filename_2
+            matrix[ecu_1.name][ecu_2.name] = value
 
-        clusters[highest_control].append(filename_1)
-
-        print("Parsed {}".format(filename_1))
+    return matrix
 
 def print_clusters():
     """
@@ -477,8 +473,16 @@ def print_clusters():
             print("\t{}".format(bin))
 
 if __name__ == '__main__':
+    # Setup
     setup_controls()
-    cluster_bins()
+    matrix = cluster_bins()
+
+    book = xlsxwriter.Workbook("matrix.xlsx")
+    sheet = book.add_worksheet(table.name)
+    header_format = book.add_format({'font_color': 'white', 'bg_color': 'black'})
+    
+
+    # print_clusters()
 
     with open('clusters.json', 'w') as file:
         json.dump(clusters, file)
