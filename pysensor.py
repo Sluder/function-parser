@@ -475,54 +475,6 @@ def func_parse_str(func_str):
             ret.append(addr)
     return ret
 
-# Creates an array of hashed features representing the instruction grams of each block within a function
-def grab_features(func, visited):
-
-    func_dict = {}
-
-    if func in visited:
-        return func_dict
-
-    func_dict[ur"{}".format(func.base_addr)] = ur"{}".format(get_signature(func.cfg.first, []))
-    visited.append(func)
-
-    #for child in func.children.values():
-    #    func_dict.update(grab_features(child, visited))
-
-    return func_dict
-
-# return a list of hash values for an entire function
-def get_signature(block, visited):
-
-    result = []
-    if block is None or block in visited: # Ignore blocks we've already resited
-        return result
-
-    result.extend(block.get_seq_inst())
-    #result.extend(block.ret_instruct_list())
-
-    visited.append(block)
-
-    if block.jump is not None:
-        result.extend(get_signature(block.jump, visited))
-
-    if block.fail is not None:
-        result.extend(get_signature(block.fail, visited))
-
-    return result
-
-def get_json(feature_dict):
-
-    return OrderedDict(json.dumps(feature_dict))
-
-# helper function to check if a string is a hex string or not
-def isHex(num):
-    try:
-        int (num, 16)
-        return True
-    except ValueError:
-        return False
-
 def load_sensors(fn, sensor_list):
     ra2 = r2pipe.open(fn, ["-2"])
 

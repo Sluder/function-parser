@@ -25,25 +25,30 @@ class Instruction:
         self.opcode = params[0]
         self.params = params[1:]
 
+    def __str__(self):
+        if self.params:
+            return "Opcode: {}, Params: {}\n".format(self.opcode, self.params)
+        return "Opcode: {}\n".format(self.opcode)
+
 
 class Block:
     def __init__(self, base_addr, seq_json):
         self.base_addr = hex(base_addr)
-        self._parents = list()
-        self.seq_inst = OrderedDict()
+        self.parents = []
+        self.instructions = OrderedDict()
 
         for op in seq_json:
-            self.seq_inst[op['offset']] = Instruction(op['offset'], op['opcode'])
+            self.instructions[op['offset']] = Instruction(op['offset'], op['opcode'])
 
-    def get_seq_inst(self, should_hash=True):
+    def get_instructions(self, should_hash=True):
         """
         String representation of block instructions
         :param should_hash: Return hask of opcodes or not
         """
         opcodes = ""
 
-        for instruction in self.seq_inst.values():
-            opcodes = opcodes + "{}".format(instruction.opcode)
+        for instruction in self.instructions.values():
+            opcodes = opcodes + str(instruction.opcode)
 
         return md5.new(opcodes).hexdigest() if should_hash else opcodes
 
@@ -53,23 +58,22 @@ class Block:
         opcodes = []
 
         if stop_addr is None:
-            for key in self.seq_inst.keys():
-                opcodes.append(self.seq_inst[key].opcode)
+            for key in self.instructions.keys():
+                opcodes.append(self.instructions[key].opcode)
         else:
             if get_first_ops:
-                for key in self.seq_inst.keys():
+                for key in self.instructions.keys():
                     if key == stop_addr:
                         break
-                    else:
-                        opcodes.append(self.seq_inst[key].opcode)
+                    opcodes.append(self.instructions[key].opcode)
             else:
                 post_key = False
 
-                for key in self.seq_inst.keys():
+                for key in self.instructions.keys():
                     if key == stop_addr:
                         post_key = True
                     elif post_key:
-                        opcodes.append(self.seq_inst[key].opcode)
+                        opcodes.append(self.instructions[key].opcode)
 
         # Split list into N-gram opcodes if number of grams in list is sufficient
         if n_grams > 0 and n_grams < len(opcodes):
@@ -86,7 +90,7 @@ class Block:
 
     def gen_features(self, sensor, depth=1):
         features = {0:[], 1:[]}
-        li = self.seq_inst
+        li = self.instructions
         found = False
         instruction_addr = 0
 
@@ -100,22 +104,23 @@ class Block:
             features[1] = self._gen_following_grams(instruction_addr)
 
         return features
-def _gen_preceeding_grams(self, instruction_addr, depth=1):
-    ret = []
-    parents_have_parents = False
-    for parent in self._parents:
-        ret.extend(parent._n_grams())
-        if parent._parents is not None:
-            parents_have_parents = True
 
-    ret.extend(self._n_grams(instruction_addr))
+    def _gen_preceeding_grams(self, instruction_addr, depth=1):
+        ret = []
+        parents_have_parents = False
+        for parent in self.parents:
+            ret.extend(parent._n_grams())
+            if parent.parents is not None:
+                parents_have_parents = True
 
-    if depth > 0 and parents_have_parents:
-        for parent in self._parents:
-            if parent._parents is not None:
-                ret.extend(parent._gen_preceeding_grams(instruction_addr, depth - 1))
+        ret.extend(self._n_grams(instruction_addr))
 
-    return ret
+        if depth > 0 and parents_have_parents:
+            for parent in self.parents:
+                if parent.parents is not None:
+                    ret.extend(parent._gen_preceeding_grams(instruction_addr, depth - 1))
+
+        return ret
 
     def _gen_following_grams(self, instruction_addr, depth=1):
         ret = []
@@ -134,7 +139,7 @@ def _gen_preceeding_grams(self, instruction_addr, depth=1):
     def feature_gen_p2(self):
         features = {}
         n = 2
-        li = self.seq_inst
+        li = self.instructions
         keys = li.keys()
         vals = li.values()
 
@@ -147,15 +152,25 @@ def _gen_preceeding_grams(self, instruction_addr, depth=1):
 
             # append first instr of next blocks
             if self.fail is not None:
-                feat = "{}{}".format(feat, self.fail.seq_inst.get(int(self.fail.base_addr, 16)).opcode)
+                feat = "{}{}".format(feat, self.fail.instructions.get(int(self.fail.base_addr, 16)).opcode)
             if self.jump is not None:
-                feat = "{}{}".format(feat, self.jump.seq_inst.get(int(self.jump.base_addr, 16)).opcode)
+                feat = "{}{}".format(feat, self.jump.instructions.get(int(self.jump.base_addr, 16)).opcode)
 
             features[val.base_addr] = feat
 
         return features
 
-class CFG:
+    def __str__(self):
+        ret = "Addr: 0x{:04x}\n".format(self.base_addr)
+
+        if self.fail:
+            ret += "\tFail: 0x{:04x}\n".format(self.fail.base_addr)
+        if self.jump:
+            ret += "\tJump: 0x{:04x}\n".format(self.jump.base_addr)
+
+        return ret
+
+class Cfg:
     def __init__(self, json):
         self.json = json[0] if json else ""
 
@@ -178,14 +193,14 @@ class CFG:
                     if 'fail' in block_json:
                         try:
                             block_obj.fail = dict_block[block_json['fail']][0]
-                            block_obj.fail._parents.append(block_obj)
+                            block_obj.fail.parents.append(block_obj)
                         except KeyError:
                             continue
 
                     if 'jump' in block_json:
                         try:
                             block_obj.jump = dict_block[block_json['jump']][0]
-                            block_obj.jump._parents.append(block_obj)
+                            block_obj.jump.parents.append(block_obj)
                         except KeyError:
                             continue
 
@@ -199,7 +214,7 @@ class CFG:
         features = {}
 
         if blk is not None:
-            il = blk.seq_inst
+            il = blk.instructions
             feature_visited.append(blk)
             for instr in il.items():
                 for param in instr[1].params:
@@ -223,7 +238,7 @@ class CFG:
 
         #check item for LDA candidate, potential for sensor
         if blk is not None:
-            il = blk.seq_inst
+            il = blk.instructions
             feature_visited.append(blk)
             for instr in il.items():
                 #if (((u'STA' in instr[1].opcode or u'STB' in instr[1].opcode or instr[1].opcode == u'LDA') or (instr[1].opcode == u'LDB')) and not ("al" in instr[1].params[0] or "bl" in instr[1].params[0]  or "ax" in instr[1].params[0] or "bx" in instr[1].params[0] or "xl" in instr[1].params[0] or "yl" in instr[1].params[0])):
@@ -254,6 +269,20 @@ class CFG:
 
         return features
 
+    def __str__(self):
+        ret = ""
+        node = self.first
+
+        while node is not None:
+            ret += "{}\n".format(node)
+
+            if node.fail:
+                node = node.fail
+            else:
+                node = node.jump
+
+        return ret
+
 
 class Function:
     base_addr = 0x0
@@ -265,12 +294,6 @@ class Function:
         self.children = {}
         self.parents = {}
         self.cfg = cfg
-
-    def push_child(self, func):
-        self.children[func.base_addr] = func
-
-    def get_single_feature(self, addr):
-        return self.cfg.get_feature()
 
     def get_features(self):
         global feature_visited
@@ -284,6 +307,14 @@ class Function:
 
         return self.cfg.get_ctrl_feature(self.cfg.first, sensor)
 
+    def __str__(self):
+        ret = "{}\n".format(self.base_addr)
+
+        for child in self.children.values():
+            ret += "\t{}".format(child)
+
+        return ret
+
 
 class EcuFile:
     def __init__(self, filename, r2):
@@ -293,11 +324,16 @@ class EcuFile:
         name = split[len(split) - 1].split('-')
         self.name = name[0][4:] + '-' + name[1][2:] + '-' + name[4].split('.')[0]
 
+        r2.cmd('e asm.arch=m7700')
+        r2.cmd('e anal.limits=true')
+        r2.cmd('e anal.from=0x8000')
+        r2.cmd('e anal.to=0xffd0')
+
         self.get_rvector_location(r2)
         self.get_rvector_calls(r2)
+        self.analyze_rvector(r2)
 
-        healthcheck = Counter(self.rvector_jmps).most_common(1)
-        self.healthcheck = healthcheck[0][0] if healthcheck else "?"
+        self.analyze_healthcheck(r2)
 
     def get_rvector_location(self, r2):
         """
@@ -315,7 +351,8 @@ class EcuFile:
         r2.cmd('s 0x{}'.format(self.rvector_location))
         r2.cmd('aa')
 
-        # TODO: fix? Get 1000 instructions due to radare2 stopping too early with analysis
+        # Get 1000 instructions due to radare2 stopping too early with analysis
+        # Fix was to use 'afu' to resize function after finding main loop
         instructions = json.loads(r2.cmd('pdj 1000').replace('\r\n', '').decode('utf-8', 'ignore'), strict=False, object_pairs_hook=OrderedDict)
         calls = []
         stores = 0
@@ -348,6 +385,36 @@ class EcuFile:
         self.rvector_calls = len(calls)
         self.rvector_jmps = calls
 
+    def analyze_rvector(self, r2):
+        """
+        Grab reset vector blocks
+        """
+        self.rvector_cfg = Cfg(json.loads(
+            unicode(r2.cmd("agj"), errors='ignore'), strict=False, object_pairs_hook=OrderedDict
+        ))
+        hashes = []
+        for offset, pair in self.rvector_cfg.blocks.items():
+            hashes.append(pair[0].get_instructions())
+        self.rvector_hashes = hashes
+
+    def analyze_healthcheck(self, r2):
+        """
+        Grab healthcheck blocks
+        """
+        healthcheck = Counter(self.rvector_jmps).most_common(1)
+        self.healthcheck = healthcheck[0][0] if healthcheck else "?"
+
+        r2.cmd("s 0x{}".format(self.healthcheck))
+        r2.cmd("aa")
+        self.healthcheck_cfg = Cfg(json.loads(
+            unicode(r2.cmd("agj"), errors='ignore'), strict=False, object_pairs_hook=OrderedDict
+        ))
+
+        instructions = []
+        for offset, pair in self.healthcheck_cfg.blocks.items():
+            instructions.append(pair[0].get_instructions())
+        self.healthcheck_hashes = instructions
+
     def __str__(self):
         pass
 
@@ -366,49 +433,13 @@ def jaccard_index(list_1, list_2):
 
     return float(intersection) / union
 
-def parse_bin(filename, r2):
-    """
-    Helper to parse a bin file and get the CFG for the reset vector
-    :returns: EcuFile instance
-    """
-    r2.cmd('e asm.arch=m7700')
-    r2.cmd('e anal.limits=true')
-    r2.cmd('e anal.from=0x8000')
-    r2.cmd('e anal.to=0xffd0')
-
-    ecu = EcuFile(filename, r2)
-
-    # Grab reset vector blocks
-    ecu.rvector_cfg = CFG(json.loads(
-        unicode(r2.cmd("agj"), errors='ignore'), strict=False, object_pairs_hook=OrderedDict
-    ))
-    hashes = []
-    for offset, pair in ecu.rvector_cfg.blocks.items():
-        hashes.append(pair[0].get_seq_inst())
-    ecu.rvector_hashes = hashes
-
-    # Grab healthcheck blocks
-    r2.cmd("s 0x{}".format(ecu.healthcheck))
-    r2.cmd("aa")
-    ecu.healtcheck_cfg = CFG(json.loads(
-        unicode(r2.cmd("agj"), errors='ignore'), strict=False, object_pairs_hook=OrderedDict
-    ))
-    hashes = []
-    for offset, pair in ecu.healtcheck_cfg.blocks.items():
-        hashes.append(pair[0].get_seq_inst())
-    ecu.healthcheck_hashes = hashes
-
-    r2.quit()
-
-    return ecu
-
 def setup_controls():
     """
     Setup & parse control binaries
     """
     for filename, _ in control_bins.items():
         r2 = r2pipe.open('./bins/{}'.format(filename))
-        control_bins[filename] = parse_bin(filename, r2)
+        control_bins[filename] = EcuFile(filename, r2)
         clusters[filename] = []
 
         print("Created control for {}".format(filename))
@@ -419,7 +450,7 @@ def cluster_bins():
     """
     for filename_1 in os.listdir('./bins'):
         r2 = r2pipe.open('./bins/' + filename_1)
-        ecu = parse_bin(filename_1, r2)
+        ecu = EcuFile(filename_1, r2)
 
         highest_value = 0
         highest_control = None
