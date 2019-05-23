@@ -3,19 +3,10 @@
 import r2pipe
 import os
 import json
-import md5
-import xlsxwriter
+import numpy
+import pandas
 from collections import OrderedDict, Counter
-
-# List control binaries for clustering
-control_bins = {
-    "722527-1993-USDM-SVX-EG33.bin" : None,
-    "703243-1991-EDM-Legacy-EJ22.bin" : None,
-    "74401A-1995-JDM-WrxRA-EJ20T.bin" : None
-}
-
-# List for clustered binaries
-clusters = {}
+from sklearn.cluster import AgglomerativeClustering
 
 
 class Instruction:
@@ -51,7 +42,7 @@ class Block:
         for instruction in self.instructions.values():
             opcodes = opcodes + str(instruction.opcode)
 
-        return md5.new(opcodes).hexdigest() if should_hash else opcodes
+        return opcodes
 
     def _n_grams(self, stop_addr=None, get_first_ops=True, n_grams=2):
         grams = []
@@ -221,7 +212,7 @@ class Cfg:
                 for param in instr[1].params:
                     if sensor.lower() in features.keys():
                         if sensor.lower() in param.lower():
-                            features[ur"{}".format(param)].update(self.gen_features(instr, blk))
+                            features["{}".format(param)].update(self.gen_features(instr, blk))
                     else:
                         if sensor.lower() in param.lower():
                             features[sensor] = self.gen_features(instr, blk)
@@ -246,19 +237,19 @@ class Cfg:
                     for param in instr[1].params:
                         if param not in features.keys() and "0x" in param and "#" not in param and "$" not in param:
                             if int(param, 16) < 0x6000:
-                                features[ur"{}".format(param)] = self.gen_features(instr, blk)
+                                features["{}".format(param)] = self.gen_features(instr, blk)
                         elif param in features.keys():
-                            features[ur"{}".format(param)].update(self.gen_features(instr, blk))
+                            features["{}".format(param)].update(self.gen_features(instr, blk))
                         elif "$" in param and "0x" in param:
                             hex_param = "{}".format(param[1:])  # remove $ from param
                             if int(hex_param, 16) < 0x6000:
                                 if hex_param not in features.keys():
-                                    features[ur"{}".format(hex_param)] = self.gen_features(instr, blk)
+                                    features["{}".format(hex_param)] = self.gen_features(instr, blk)
                                 else:
-                                    features[ur"{}".format(hex_param)].update(self.gen_features(instr, blk))
+                                    features["{}".format(hex_param)].update(self.gen_features(instr, blk))
 
                 except IndexError as ie:
-                    print ie
+                    print(ie)
                     continue
             # recurse through all later blocks to look for additional candidates
             if (blk.jump is not None and blk.jump not in feature_visited):
@@ -337,22 +328,25 @@ class EcuFile:
     def get_rvector_location(self, r2):
         """
         Get addr location of the reset vector
+        :param r2: radare2 instance
         """
         r2.cmd('s 0xfffe')
-        location = r2.cmd('px0')[:4]
+        location = str(r2.cmd('px0')[:4], 'ISO-8859-1')
 
         self.rvector_location = location[2:4] + location[:2]
 
     def get_rvector_calls(self, r2):
         """
         Get all calls made in the reset vectors main loop
+        :param r2: radare2 instance
         """
         r2.cmd('s 0x{}'.format(self.rvector_location))
         r2.cmd('aa')
 
         # Get 1000 instructions due to radare2 stopping too early with analysis
-        # Fix was to use 'afu' to resize function after finding main loop
-        instructions = json.loads(r2.cmd('pdj 1000').replace('\r\n', '').decode('utf-8', 'ignore'), strict=False, object_pairs_hook=OrderedDict)
+        # Fix was to use 'afu' to resize function after finding main loop .replace('\r\n', '').decode('utf-8', 'ignore')
+        instructions = json.loads(str(r2.cmd('pdj 1000'), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict)
+
         calls = []
         stores = 0
         watch = False
@@ -387,9 +381,10 @@ class EcuFile:
     def analyze_rvector(self, r2):
         """
         Grab reset vector blocks
+        :param r2: radare2 instance
         """
         self.rvector_cfg = Cfg(json.loads(
-            unicode(r2.cmd("agj"), errors='ignore'), strict=False, object_pairs_hook=OrderedDict
+            str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
         ))
         hashes = []
         for offset, pair in self.rvector_cfg.blocks.items():
@@ -399,6 +394,7 @@ class EcuFile:
     def analyze_healthcheck(self, r2):
         """
         Grab healthcheck blocks
+        :param r2: radare2 instance
         """
         healthcheck = Counter(self.rvector_jmps).most_common(1)
         self.healthcheck = healthcheck[0][0] if healthcheck else "?"
@@ -406,7 +402,7 @@ class EcuFile:
         r2.cmd("s 0x{}".format(self.healthcheck))
         r2.cmd("aa")
         self.healthcheck_cfg = Cfg(json.loads(
-            unicode(r2.cmd("agj"), errors='ignore'), strict=False, object_pairs_hook=OrderedDict
+            str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
         ))
 
         instructions = []
@@ -432,57 +428,58 @@ def jaccard_index(list_1, list_2):
 
     return float(intersection) / union
 
-def setup_controls():
-    """
-    Setup & parse control binaries
-    """
-    for filename, _ in control_bins.items():
-        r2 = r2pipe.open('./bins/{}'.format(filename))
-        control_bins[filename] = EcuFile(filename, r2)
-        clusters[filename] = []
-
-        print("Created control for {}".format(filename))
-
 def cluster_bins():
     """
-    Cluster unknown binaries based on the controls
+    Cluster binaries through Hierarchical Clustering
+    :returns: Clustering results
     """
-    matrix = []
     bins = []
+    clusters = OrderedDict()
 
+    # Analyze all binaries
     for filename in os.listdir("./bins"):
         r2 = r2pipe.open("./bins/{}".format(filename))
         bins.append(EcuFile(filename, r2))
 
+    row = 0
+    matrix = numpy.empty((len(bins), len(bins)))
+
+    # Create comparison matrix
     for ecu_1 in bins:
+        col = 0
+        print("Analyzing {}".format(ecu_1.filename))
+
         for ecu_2 in bins:
-            value = jaccard_index(ecu.rvector_hashes, control.rvector_hashes)
+            value = jaccard_index(ecu_1.rvector_hashes, ecu_2.rvector_hashes)
 
-            matrix[ecu_1.name][ecu_2.name] = value
+            matrix[row][col] = value
+            col += 1
+        row += 1
 
-    return matrix
+    # Hierarchical Clustering
+    ac_clusters = AgglomerativeClustering(
+        n_clusters=None, distance_threshold=1, linkage='single'
+    ).fit(matrix).labels_
 
-def print_clusters():
+    for i in range(len(ac_clusters)):
+        if ac_clusters[i] not in clusters:
+            clusters[ac_clusters[i]] = []
+        clusters[ac_clusters[i]].append(bins[i])
+
+    return clusters
+
+def print_clusters(clusters):
     """
     Output clustering results
+    :param clusters: Clusters built from cluster_bins()
     """
-    for control, bins in clusters.items():
-        print(control)
+    for cluster_num, bins in sorted(clusters.items()):
+        print("Cluster {}".format(cluster_num))
 
         for bin in bins:
-            print("\t{}".format(bin))
+            print("\t{}".format(bin.filename))
 
 if __name__ == '__main__':
-    # Setup
-    setup_controls()
-    matrix = cluster_bins()
+    clusters = cluster_bins()
 
-    book = xlsxwriter.Workbook("matrix.xlsx")
-    sheet = book.add_worksheet(table.name)
-    header_format = book.add_format({'font_color': 'white', 'bg_color': 'black'})
-    
-
-    # print_clusters()
-
-    with open('clusters.json', 'w') as file:
-        json.dump(clusters, file)
+    print_clusters(clusters)
