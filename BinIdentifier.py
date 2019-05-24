@@ -275,10 +275,6 @@ class Cfg:
 
 
 class Function:
-    base_addr = 0x0
-    json = ""
-    dot = ""
-
     def __init__(self, base_addr, cfg):
         self.base_addr = base_addr
         self.children = {}
@@ -344,9 +340,8 @@ class EcuFile:
         r2.cmd('aa')
 
         # Get 1000 instructions due to radare2 stopping too early with analysis
-        # Fix was to use 'afu' to resize function after finding main loop .replace('\r\n', '').decode('utf-8', 'ignore')
+        # Fix was to use command 'afu' to resize function after finding main loop
         instructions = json.loads(str(r2.cmd('pdj 1000'), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict)
-
         calls = []
         stores = 0
         watch = False
@@ -358,10 +353,7 @@ class EcuFile:
             split = ins['opcode'].split(' ')
 
             if not watch:
-                if split[0] == 'STA':
-                    stores += 1
-                else:
-                    stores = 0
+                stores += 1 if split[0] == 'STA' else 0
 
                 if stores >= 6:
                     watch = True
@@ -375,7 +367,6 @@ class EcuFile:
                     calls = []
                     continue
 
-        self.rvector_calls = len(calls)
         self.rvector_jmps = calls
 
     def analyze_rvector(self, r2):
@@ -410,8 +401,6 @@ class EcuFile:
             instructions.append(pair[0].get_instructions())
         self.healthcheck_hashes = instructions
 
-    def __str__(self):
-        pass
 
 def jaccard_index(list_1, list_2):
     """
@@ -428,37 +417,27 @@ def jaccard_index(list_1, list_2):
 
     return float(intersection) / union
 
-def cluster_bins():
+def cluster_bins(bins):
     """
     Cluster binaries through Hierarchical Clustering
     :returns: Clustering results
     """
-    bins = []
     clusters = OrderedDict()
-
-    # Analyze all binaries
-    for filename in os.listdir("./bins"):
-        r2 = r2pipe.open("./bins/{}".format(filename))
-        bins.append(EcuFile(filename, r2))
-
-    row = 0
     matrix = numpy.empty((len(bins), len(bins)))
 
     # Create comparison matrix
+    row = 0
     for ecu_1 in bins:
         col = 0
-        print("Analyzing {}".format(ecu_1.filename))
 
         for ecu_2 in bins:
-            value = jaccard_index(ecu_1.rvector_hashes, ecu_2.rvector_hashes)
-
-            matrix[row][col] = value
+            matrix[row][col] = jaccard_index(ecu_1.rvector_hashes, ecu_2.rvector_hashes)
             col += 1
         row += 1
 
     # Hierarchical Clustering
     ac_clusters = AgglomerativeClustering(
-        n_clusters=None, distance_threshold=1, linkage='single'
+        n_clusters=None, compute_full_tree=True, distance_threshold=0.8, linkage='single'
     ).fit(matrix).labels_
 
     for i in range(len(ac_clusters)):
@@ -474,12 +453,21 @@ def print_clusters(clusters):
     :param clusters: Clusters built from cluster_bins()
     """
     for cluster_num, bins in sorted(clusters.items()):
-        print("Cluster {}".format(cluster_num))
+        print("Cluster {}".format(cluster_num + 1))
 
         for bin in bins:
-            print("\t{}".format(bin.filename))
+            print("\t{}".format(bin.name))
 
 if __name__ == '__main__':
-    clusters = cluster_bins()
+    bins = []
+
+    # Analyze all binaries
+    for filename in os.listdir("./bins"):
+        r2 = r2pipe.open("./bins/{}".format(filename))
+        bins.append(EcuFile(filename, r2))
+
+        print("Loaded {}".format(filename))
+
+    clusters = cluster_bins(bins)
 
     print_clusters(clusters)
