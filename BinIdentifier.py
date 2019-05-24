@@ -388,7 +388,10 @@ class EcuFile:
         :param r2: radare2 instance
         """
         healthcheck = Counter(self.rvector_jmps).most_common(1)
-        self.healthcheck = healthcheck[0][0] if healthcheck else "?"
+        if not healthcheck:
+            self.healthcheck = "0x0000"
+            return
+        self.healthcheck = healthcheck[0][0]
 
         r2.cmd("s 0x{}".format(self.healthcheck))
         r2.cmd("aa")
