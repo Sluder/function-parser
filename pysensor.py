@@ -474,42 +474,27 @@ def func_parse_str(func_str):
         if addr and addr >= 36864:
             ret.append(addr)
     return ret
-
+#fn = filename
 def load_sensors(fn, sensor_list):
     ra2 = r2pipe.open(fn, ["-2"])
 
     if (ra2):
-        ra2.cmd("e asm.arch=m7700")
-        ra2.cmd("e anal.limits=true")
-        ra2.cmd("e anal.from=0x9000")
-        ra2.cmd("e anal.to=0xffd0")
-        #ra2.cmd("e anal.hasnext=true")
-        ra2.cmd("0x93c1")
-        ra2.cmd("aaaa")
-        #ra2.cmd("a2f")
         sensor_obj = {}
 
         for sensor, sensor_addrs in sensor_list.iteritems():
-            #print sensor
             sensor_obj[sensor] = [] #OrderedDict() # declare a list at each sensor value
 
             #for sensor_type, sensor_addrs in sensor_list.iteritems(): # populate the list with the func disassembly
             for func_addr in sensor_addrs:
                 ra2.cmd("s {}".format(func_addr))
-
-                #ra2.cmd("sf.")
-                #ra2.cmd("aa")
-                #ra2.cmd("a2f")
                 addr = ra2.cmd("s").strip()
+
                 if "0x0" not in addr:
                     if addr not in visited.keys():
                         fcn_obj = function(addr, populate_cfg(addr, ra2.cmd("agj")))
                         sensor_obj[sensor].append(fcn_obj)
-                        #sensor_obj[sensor][addr] = (fcn_obj) # create a function
-                    #    visited[addr] = fcn_obj
                     else:
                         sensor_obj[sensor].append(fcn_obj)
-                        #sensor_obj[sensor][addr] = (visited[addr])
 
         ra2.quit()
     else:
@@ -607,20 +592,15 @@ def find_sensors(control_func_addr, test_func_addr, args):
     func_sensors = {}
 
     for val in control_func_addr:
-        #print val
-        #z = itertools.izip(control_func_addr[val].values(), test_func_addr[val].values())
         z = OrderedDict(zip(control_func_addr[val], test_func_addr[val]))
 
-        for  control, test in z.iteritems():
-
+        for control, test in z.iteritems():
             control_features = control.get_features()
 
             if func_sensors.has_key(val):
                 func_sensors[val].append(get_sensor_val(val, control, test, control_features, args))
             else:
                 func_sensors[val] = [get_sensor_val(val, control, test, control_features, args)]
-
-        #print func_sensors[val]
 
     return func_sensors
 
@@ -632,9 +612,9 @@ def main ():
 
     parser = argparse.ArgumentParser(description='Import and process M7700 JSON Graph files.')
 
-    parser.add_argument('filename', metavar='filename', nargs='?', default='file.json', type=str, help='M7700 ROM file for parsing')
-    parser.add_argument('-s', '--settings', metavar='settings', default="parser_settings.json", type=str, help='Specify Settings Filename')
-    parser.add_argument('-l', '--long-output', metavar='long-output', default="parser_settings.json", type=str, help='Extended JSON Output (contains feature vectors)')
+    parser.add_argument('filename', metavar='filename', nargs='?', default='functions_test.json', type=str, help='M7700 ROM file for parsing')
+    parser.add_argument('-s', '--settings', metavar='settings', default="controls_test.json", type=str, help='Specify Settings Filename')
+    parser.add_argument('-l', '--long-output', metavar='long-output', default="ontrols_test.json", type=str, help='Extended JSON Output (contains feature vectors)')
     parser.add_argument('-o', '--output', action='store_true', help='Output M7700 rom to file')
 
     logging.basicConfig(filename='log_filename.txt', level=logging.DEBUG)
@@ -657,30 +637,32 @@ def main ():
         if (".bin") in f:
             file_list[_json_parser_format(f)] = f
 
+    # control.json
     for control_file, control_params in control_files.iteritems():
+        print(control_params)
         jsons = {}
         global sensor_values
         sensor_values = control_params['sensors']
         global sensors
         sensors = control_params['sensor_functions']
         #if "EG33" in control_file:
-        engine = control_params['engine']
+        engine = 'EJ20T'
 
         control_cfg = load_sensors("{}/bins/{}".format(os.getcwd(), control_file), control_params['sensor_functions'])
+
         # Lookup params from control file
+        #functions.json
         for test_bin, files in json_val.iteritems(): # for file in the func list
             if engine in test_bin:
                 print "Getting sensor features for Engine {}".format(engine)
+                # for file & functions in all bins
                 for fn, func_list in files.iteritems():
                     if fn not in u'Control':
                         jsons[fn] = None
-                    # need a more elegant way to path to the files than this
                         sensor_list = load_sensors("{}/bins/{}".format(os.getcwd(), file_list[fn]), func_list)
 
                         # output format - each filename will have a list like the control list above
                         jsons[fn] = find_sensors(control_cfg, sensor_list, args)
-
-                # attempt to find matching function for each value in the control_cfg
 
                         for sensor, candidate_listings in jsons[fn].iteritems():
                             num_listings = dict(Counter(candidate_listings))

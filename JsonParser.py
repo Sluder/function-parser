@@ -7,14 +7,14 @@ import r2pipe
 
 # Predefined functions containing sensor addresses for comparision's
 sensors = {
-    'batt_voltage': ['0x9a56', '0x9f5b', '0xa166', '0xa307', '-0xae2c', '0xd982', '0xe1cd'],
-    'vehicle_speed': ['0x9be8', '0x9dce', '0xa59d', '0xa9a7', '0xafc6', '0xb5fc', '0xb960'],
-    'engine_speed': ['0xa59d', '0xa5ec', '0xa9a7', '0xafc6', '0xb5bf', '0xb960', '0xc356'],
-    'water_temp': ['0x9b46', '0xab56'],
-    'ignition_timing': ['0xdb1a', '0xda0f'],
-    'airflow': ['0xddcd'],
-    'throttle_position': ['0xe1cd'],
-    'knock_correction': ['0xafc6']
+    "batt_voltage": ["0x9a50", "0xa20b", "0xa000", "0xa0f0", "0xabfe", "0xd809", "0xddf8"],
+    "vehicle_speed": ["0x9c10", "0x9f13", "0xa1b7", "0xa633", "0xad12", "0xb500", "0xb91b"],
+    "engine_speed": ["0x9cbe", "0xa31a", "0xa633", "0xadf3", "0xb4c2", "0xb87e", "0xc0d1"],
+    "water_temp": ["0x9b7c", "0xa90b"],
+    "ignition_timing": ["0xf91b", "0xf93f"],
+    "airflow": ["0xdb5b"],
+    "throttle_position": ["0xdd53"],
+    "knock_correction": ["0xb2f3"]
 }
 
 
@@ -116,7 +116,7 @@ if __name__ == '__main__':
             ecu_file = EcuFile(file_name, json_data[file_name])
 
             # Pick out control file
-            if ecu_file.name == '27-93-EG33':
+            if ecu_file.name == '14-95-EJ20T':
                 control_file = ecu_file
             else:
                 ecu_files.append(ecu_file)

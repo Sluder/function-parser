@@ -5,34 +5,38 @@ import os
 import json
 import numpy
 import pandas
+import operator
 from collections import OrderedDict, Counter
 from sklearn.cluster import AgglomerativeClustering
+from itertools import count
 
+BIN_DIR = './bins'
 
 class Instruction:
     def __init__(self, base_addr, instruction):
         self.base_addr = hex(base_addr)
 
-        params = instruction.split()
-        self.opcode = params[0]
-        self.params = params[1:]
+        operands = instruction.split()
+        self.opcode = operands[0]
+        self.operands = operands[1:]
 
     def __str__(self):
-        if self.params:
-            return "Opcode: {}, Params: {}\n".format(self.opcode, self.params)
+        if self.operands:
+            return "Opcode: {}, Operands: {}\n".format(self.opcode, self.operands)
         return "Opcode: {}\n".format(self.opcode)
 
 
 class Block:
-    def __init__(self, base_addr, seq_json):
+    def __init__(self, base_addr, instruction_js):
         self.base_addr = hex(base_addr)
         self.parents = []
         self.instructions = OrderedDict()
 
-        for op in seq_json:
-            self.instructions[op['offset']] = Instruction(op['offset'], op['opcode'])
+        # Create instructions for ones in this block
+        for inst in instruction_js:
+            self.instructions[inst['offset']] = Instruction(inst['offset'], inst['opcode'])
 
-    def get_instructions(self, should_hash=True):
+    def get_opcodes(self, should_hash=True):
         """
         String representation of block instructions
         :param should_hash: Return hask of opcodes or not
@@ -44,70 +48,67 @@ class Block:
 
         return opcodes
 
-    def _n_grams(self, stop_addr=None, get_first_ops=True, n_grams=2):
-        grams = []
-        ret = []
+    def n_grams(self, stop_addr=None, get_first_ops=True, n_grams=2):
         opcodes = []
 
         if stop_addr is None:
-            for key in self.instructions.keys():
-                opcodes.append(self.instructions[key].opcode)
+            for instruction in self.instructions.values():
+                opcodes.append(instruction.opcode)
         else:
             if get_first_ops:
-                for key in self.instructions.keys():
-                    if key == stop_addr:
+                for address, instruction in self.instructions.items():
+                    if address == stop_addr:
                         break
-                    opcodes.append(self.instructions[key].opcode)
+                    opcodes.append(instruction.opcode)
             else:
-                post_key = False
+                skip = False
 
-                for key in self.instructions.keys():
-                    if key == stop_addr:
-                        post_key = True
-                    elif post_key:
-                        opcodes.append(self.instructions[key].opcode)
+                for address, instruction in self.instructions.items():
+                    if address == stop_addr:
+                        skip = True
+                    elif skip:
+                        opcodes.append(instruction.opcode)
 
-        # Split list into N-gram opcodes if number of grams in list is sufficient
-        if n_grams > 0 and n_grams < len(opcodes):
-            grams = zip(*[opcodes[i:] for i in range(n_grams)])
-        # Otherwise, check to see if list passes the minimum length requirement
-        elif n_grams == 0 or n_grams >= len(opcodes):
-            grams = ["".join(opcodes)]
+        return opcodes
 
-        if grams is not None:
-            for pair in grams:
-                ret.append("".join(pair))
-
-        return ret
-
-    def gen_features(self, sensor, depth=1):
-        features = {0:[], 1:[]}
-        li = self.instructions
+    def gen_features(self, inst, depth=1):
+        """
+        :param inst: Instruction instance to get features for
+        :param sensor_addr: Str of sensor address to find
+        :param depth: Number of blocks to get features from before/after inst
+        """
+        features = {"pre":[], 'post':[]}
         found = False
-        instruction_addr = 0
+        instruction_addr = None
 
-        for address, instruction in li.iteritems():
-            if sensor[1] == instruction:
+        for address, instruction in self.instructions.items():
+            if inst.base_addr == instruction.base_addr:
                 found = True
                 instruction_addr = address
 
         if found:
-            features[0] = self._gen_preceeding_grams(instruction_addr)
-            features[1] = self._gen_following_grams(instruction_addr)
+            features["pre"] = self._gen_preceeding_grams(instruction_addr)
+            features["post"] = self._gen_following_grams(instruction_addr)
 
         return features
 
     def _gen_preceeding_grams(self, instruction_addr, depth=1):
+        """
+        :param instruction_addr: Base address of instruction
+        :param depth: Number of blocks to get features from before/after inst
+        """
         ret = []
-        parents_have_parents = False
+        has_parent = False
+
         for parent in self.parents:
-            ret.extend(parent._n_grams())
+            ret.extend(parent.n_grams())
+
             if parent.parents is not None:
-                parents_have_parents = True
+                has_parent = True
 
-        ret.extend(self._n_grams(instruction_addr))
+        ret.extend(self.n_grams(instruction_addr))
 
-        if depth > 0 and parents_have_parents:
+        if depth > 0 and has_parent:
             for parent in self.parents:
                 if parent.parents is not None:
                     ret.extend(parent._gen_preceeding_grams(instruction_addr, depth - 1))
@@ -115,42 +116,25 @@ class Block:
         return ret
 
     def _gen_following_grams(self, instruction_addr, depth=1):
+        """
+        :param instruction_addr: Base address of instruction
+        :param depth: Number of blocks to get features from before/after inst
+        """
         ret = []
-        ret.extend(self._n_grams(instruction_addr, False))
+        ret.extend(self.n_grams(instruction_addr, False))
+
         if self.fail is not None:
-            ret.extend(self.fail._n_grams())
+            ret.extend(self.fail.n_grams())
+
             if depth > 0:
                 ret.extend(self.fail._gen_following_grams(instruction_addr, depth - 1))
         if self.jump is not None:
-            ret.extend(self.jump._n_grams())
+            ret.extend(self.jump.n_grams())
+
             if depth > 0:
                 ret.extend(self.jump._gen_following_grams(instruction_addr, depth - 1))
 
         return ret
-
-    def feature_gen_p2(self):
-        features = {}
-        n = 2
-        li = self.instructions
-        keys = li.keys()
-        vals = li.values()
-
-        for val in vals:
-            feat = ""
-            start = vals.index(val)
-            sub_list = vals[start: start + n - 1]
-            for instr in sub_list:
-                feat = "{}{}".format(feat, instr.opcode)
-
-            # append first instr of next blocks
-            if self.fail is not None:
-                feat = "{}{}".format(feat, self.fail.instructions.get(int(self.fail.base_addr, 16)).opcode)
-            if self.jump is not None:
-                feat = "{}{}".format(feat, self.jump.instructions.get(int(self.jump.base_addr, 16)).opcode)
-
-            features[val.base_addr] = feat
-
-        return features
 
     def __str__(self):
         ret = "Addr: 0x{:04x}\n".format(self.base_addr)
@@ -163,24 +147,32 @@ class Block:
         return ret
 
 class Cfg:
-    def __init__(self, json):
-        self.json = json[0] if json else ""
+    def __init__(self, fcn_json):
+        """
+        :param fcn_json: Function json pulled from radare
+        """
+        self.json = fcn_json[0] if fcn_json else ""
+        self.first = None
 
         if 'offset' in self.json:
-            self.base_addr = hex(json[0]['offset'])
+            self.base_addr = hex(self.json['offset'])
 
-            if 'blocks' in json[0]:
-                blocks = json[0]['blocks']
+            if 'blocks' in self.json:
+                blocks = self.json['blocks']
                 dict_block = {}
 
-                # Create a dictionary of all blocks
-                for blk in blocks:
-                    dict_block[blk['offset']] = [Block(blk['offset'], blk['ops']), blk]
+                # Create a dictionary of all blocks in this CFG
+                for block in blocks:
+                    if block['ops'][0]:
+                        dict_block[block['offset']] = [Block(block['offset'], block['ops']), block]
 
                 # Match up all the block objects to their corresponding jump, fail addresses
                 for key, pair in dict_block.items():
                     block_obj = pair[0]
                     block_json = pair[1]
+
+                    block_obj.fail = None
+                    block_obj.jump = None
 
                     if 'fail' in block_json:
                         try:
@@ -188,7 +180,6 @@ class Cfg:
                             block_obj.fail.parents.append(block_obj)
                         except KeyError:
                             continue
-
                     if 'jump' in block_json:
                         try:
                             block_obj.jump = dict_block[block_json['jump']][0]
@@ -199,63 +190,49 @@ class Cfg:
                 self.blocks = dict_block
                 self.first = dict_block[(int(self.base_addr, 16))][0]
 
-    def gen_features(self, instr, blk):
-        return blk.gen_features(instr)
-
-    def get_ctrl_feature(self, blk, sensor):
+    def get_feature(self, block, sensor_addr=None, visited_blocks=[]):
+        """
+        :param block: Current block to get feature for (Start with self.first)
+        :param sensor_addr: Sensor address to filter features for
+        """
         features = {}
 
-        if blk is not None:
-            il = blk.instructions
-            feature_visited.append(blk)
-            for instr in il.items():
-                for param in instr[1].params:
-                    if sensor.lower() in features.keys():
-                        if sensor.lower() in param.lower():
-                            features["{}".format(param)].update(self.gen_features(instr, blk))
+        if block is not None:
+            instructions = block.instructions
+            visited_blocks.append(block)
+
+            for address, inst in instructions.items():
+                for operand in inst.operands:
+                    # Look for a specific address if provided
+                    if sensor_addr is not None:
+                        if sensor_addr.lower() in features.keys() and sensor_addr.lower() in operand.lower():
+                            features[str(sensor_addr)].update(block.gen_features(inst))
+                        else:
+                            if sensor_addr.lower() in operand.lower():
+                                features[str(sensor_addr)] = block.gen_features(inst)
                     else:
-                        if sensor.lower() in param.lower():
-                            features[sensor] = self.gen_features(instr, blk)
-            # recurse through all later blocks to look for additional candidates
-            if (blk.jump is not None and blk.jump not in feature_visited):
-                features.update(self.get_ctrl_feature(blk.jump, sensor))
-            if (blk.fail is not None and blk.fail not in feature_visited):
-                features.update(self.get_ctrl_feature(blk.fail, sensor))
+                        # If operand is an address, could be a sensor address
+                        if operand not in features.keys() and operand.startswith("0x"):
+                            if int(operand, 16) < 0x6000:
+                                features[str(operand)] = block.gen_features(inst)
 
-        return features
+                        elif operand in features.keys():
+                            features[str(operand)].update(block.gen_features(inst))
 
-    def get_feature(self, blk):
-        features = {}
-        global feature_visited
-
-        #check item for LDA candidate, potential for sensor
-        if blk is not None:
-            il = blk.instructions
-            feature_visited.append(blk)
-            for instr in il.items():
-                try:
-                    for param in instr[1].params:
-                        if param not in features.keys() and "0x" in param and "#" not in param and "$" not in param:
-                            if int(param, 16) < 0x6000:
-                                features["{}".format(param)] = self.gen_features(instr, blk)
-                        elif param in features.keys():
-                            features["{}".format(param)].update(self.gen_features(instr, blk))
-                        elif "$" in param and "0x" in param:
-                            hex_param = "{}".format(param[1:])  # remove $ from param
-                            if int(hex_param, 16) < 0x6000:
-                                if hex_param not in features.keys():
-                                    features["{}".format(hex_param)] = self.gen_features(instr, blk)
+                        elif operand.startswith("$0x"):
+                            hex = operand[1:]
+                            if int(hex, 16) < 0x6000:
+                                if hex not in features.keys():
+                                    features[str(hex)] = block.gen_features(inst)
                                 else:
-                                    features["{}".format(hex_param)].update(self.gen_features(instr, blk))
+                                    features[str(hex)].update(block.gen_features(inst))
 
-                except IndexError as ie:
-                    print(ie)
-                    continue
-            # recurse through all later blocks to look for additional candidates
-            if (blk.jump is not None and blk.jump not in feature_visited):
-                features.update(self.get_feature(blk.jump))
-            if (blk.fail is not None and blk.fail not in feature_visited):
-                features.update(self.get_feature(blk.fail))
+            # Recurse through connected blocks for features
+            # if sensor_addr is None or (sensor_addr is not None and not sensor_found):
+            if block.jump is not None and block.jump not in visited_blocks:
+                features.update(self.get_feature(block.jump, sensor_addr, visited_blocks))
+            if block.fail is not None and block.fail not in visited_blocks:
+                features.update(self.get_feature(block.fail, sensor_addr, visited_blocks))
 
         return features
 
@@ -265,61 +242,49 @@ class Cfg:
 
         while node is not None:
             ret += "{}\n".format(node)
-
-            if node.fail:
-                node = node.fail
-            else:
-                node = node.jump
+            node = node.fail if node.fail else node.jump
 
         return ret
 
 
 class Function:
     def __init__(self, base_addr, cfg):
+        """
+        :param base_addr: Address of function
+        :param cfg: CFG json pulled from radare2
+        """
         self.base_addr = base_addr
         self.children = {}
         self.parents = {}
         self.cfg = cfg
 
-    def get_features(self):
-        global feature_visited
-        feature_visited = []
-
-        return self.cfg.get_feature(self.cfg.first)
-
-    def get_ctrl_features(self, sensor):
-        global feature_visited
-        feature_visited = []
-
-        return self.cfg.get_ctrl_feature(self.cfg.first, sensor)
-
-    def __str__(self):
-        ret = "{}\n".format(self.base_addr)
-
-        for child in self.children.values():
-            ret += "\t{}".format(child)
-
-        return ret
-
+    def get_features(self, sensor_addr=None):
+        """
+        Gets all features for sensor address candidates
+        :param sensor_addr: Sensor address to filter features for
+        """
+        if not self.cfg.first:
+            return {}
+        return self.cfg.get_feature(self.cfg.first, sensor_addr)
 
 class EcuFile:
-    def __init__(self, filename, r2):
+    def __init__(self, filename, r2, sensor_functions=None):
         self.filename = filename
 
         split = filename.split('/')
         name = split[len(split) - 1].split('-')
         self.name = name[0][4:] + '-' + name[1][2:] + '-' + name[4].split('.')[0]
 
-        r2.cmd('e asm.arch=m7700')
-        r2.cmd('e anal.limits=true')
-        r2.cmd('e anal.from=0x8000')
-        r2.cmd('e anal.to=0xffd0')
+        r2 = setup_r2("./bins/{}".format(filename))
 
         self.get_rvector_location(r2)
         self.get_rvector_calls(r2)
         self.analyze_rvector(r2)
+        # self.analyze_healthcheck(r2)
 
-        self.analyze_healthcheck(r2)
+        # Only called if this bin is the control for a cluster
+        if sensor_functions:
+            self.load_sensors(r2, sensor_functions)
 
     def get_rvector_location(self, r2):
         """
@@ -327,7 +292,7 @@ class EcuFile:
         :param r2: radare2 instance
         """
         r2.cmd('s 0xfffe')
-        location = str(r2.cmd('px0')[:4], 'ISO-8859-1')
+        location = str(r2.cmd('px0'), 'ISO-8859-1')[:4]
 
         self.rvector_location = location[2:4] + location[:2]
 
@@ -379,7 +344,7 @@ class EcuFile:
         ))
         hashes = []
         for offset, pair in self.rvector_cfg.blocks.items():
-            hashes.append(pair[0].get_instructions())
+            hashes.append(pair[0].get_opcodes())
         self.rvector_hashes = hashes
 
     def analyze_healthcheck(self, r2):
@@ -401,13 +366,155 @@ class EcuFile:
 
         instructions = []
         for offset, pair in self.healthcheck_cfg.blocks.items():
-            instructions.append(pair[0].get_instructions())
+            instructions.append(pair[0].get_opcodes())
         self.healthcheck_hashes = instructions
 
+    def load_sensors(self, r2, sensor_list):
+        """
+        Only used for control bins
+        :param r2: radare2 instance
+        :param sensor_list: List of sensors & addresses from control json
+        """
+        self.sensors = {}
+
+        for sensor, functions in sensor_list.items():
+            self.sensors[sensor] = []
+
+            for function in functions:
+                r2.cmd("s {}".format(function))
+                r2.cmd("aa")
+                self.sensors[sensor].append(Function(function, Cfg(json.loads(
+                    str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
+                ))))
+
+
+class Cluster:
+    _id = count(1)
+
+    def __init__(self, bins):
+        """
+        :param bins: List of all bins assigned to this cluster
+        """
+        self.bins = bins
+        self.id = next(self._id)
+
+    def match_functions(self, bins):
+        """
+        Matches bin functions with ones identified for sensors
+        :param bins: List of all bins. Used for gathering feature hashes
+        """
+        matches = {}
+
+        for bin in self.bins:
+            matches[bin.filename] = []
+
+            for sensor, sensor_fcns in self.control.sensors.items():
+                for sensor_fcn in sensor_fcns:
+                    control_bin = bins[self.control.filename]
+                    sensor_fcn.sensor = sensor
+
+                    # Function doesnt exist in hashes, so skip
+                    if sensor_fcn.base_addr not in control_bin.functions:
+                        # TODO: try to find actual fcn address & get hashes?
+                        continue
+                    control_hashes = control_bin.functions[sensor_fcn.base_addr].hashes
+
+                    highest_jaccard = 0
+                    chosen_fcn = None
+
+                    for test_fcn in bin.functions.values():
+                        value = jaccard_index(control_hashes, test_fcn.hashes)
+
+                        if value > highest_jaccard:
+                            highest_jaccard = value
+                            chosen_fcn = test_fcn
+                    matches[bin.filename].append({sensor_fcn: chosen_fcn})
+            print("Matched functions for {}".format(bin.filename))
+        self.fcn_matches = matches
+
+        return matches
+
+    def match_sensors(self):
+        """
+        Find corrosponding sensor addresses using the matched functions
+        """
+        matches = {}
+
+        # Matching results setup (Doing this below clears some results)
+        for filename in self.fcn_matches.keys():
+            matches[filename] = {}
+
+            for sensor in self.control.sensors.keys():
+                matches[filename][sensor] = {}
+
+        # Match up sensor addresses from matched functions
+        for filename, fcn_matches in self.fcn_matches.items():
+            print("Matching sensor addresses for {}".format(filename))
+
+            for match in fcn_matches:
+                highest_jaccard = 0
+                matched_addr = '0x0000'
+
+                # For matched functions found from match_functions()
+                for control_fcn, matched_fcn in match.items():
+                    sensor_addr = self.sensors[control_fcn.sensor]
+
+                    control_features = control_fcn.get_features(sensor_addr)
+                    match_features = matched_fcn.get_features()
+
+                    for addr, addr_features in match_features.items():
+                        # Average the 'pre' & 'post' features
+                        try:
+                            pre_jaccard = jaccard_index(
+                                control_features[sensor_addr]['pre'], addr_features['pre']
+                            )
+                            post_jaccard = jaccard_index(
+                                control_features[sensor_addr]['post'], addr_features['post']
+                            )
+                            average = (pre_jaccard + post_jaccard) / 2
+                        except:
+                            average = 0
+
+                        if average > highest_jaccard:
+                            highest_jaccard = average
+                            matched_addr = addr
+                    matches[filename][control_fcn.sensor][matched_addr] = round(highest_jaccard, 2)
+
+        self.sensor_matches = matches
+        self.cleanup_sensor_matches()
+
+    def cleanup_sensor_matches(self):
+        """
+        Helper to simplify sensor matches json
+        """
+        for filename, sensor_matches in self.sensor_matches.items():
+            for sensor, matches in sensor_matches.items():
+                if matches:
+                    highest_addr = max(matches.items(), key=operator.itemgetter(1))[0]
+                    self.sensor_matches[filename][sensor] = highest_addr
+
+    def print_fcn_matches(self):
+        """
+        Helper to output function matches for all bins in this cluster
+        """
+        for filename, fcn_matches in self.fcn_matches.items():
+            print(filename)
+
+            for match in fcn_matches:
+                for control_fcn, match_fcn in match.items():
+                    print("\t{} - {}".format(control_fcn.base_addr, match_fcn.base_addr))
+
+    def __str__(self):
+        ret = "Cluster {}\n".format(self.id)
+
+        for bin in self.bins:
+            ret += "\t{}\n".format(bin.name)
+
+        return ret
 
 def jaccard_index(list_1, list_2):
     """
-    Calculate Jaccard index from two lists (Use shortest list as check)
+    Calculate Jaccard Index from two lists (Use shortest list as check)
     :param list_1, list_2: Lists to compare
     :returns: Jaccard index of list_1 & list_2
     """
@@ -418,22 +525,25 @@ def jaccard_index(list_1, list_2):
 
     union = len(list_1) + len(list_2) - intersection
 
-    return float(intersection) / union
+    if union == 0:
+        return 0
+    return float(intersection / union)
 
 def cluster_bins(bins):
     """
     Cluster binaries through Hierarchical Clustering
-    :returns: Clustering results
+    :param bins: List of all bins to split into clusters
+    :returns: Clustering list results
     """
     clusters = OrderedDict()
     matrix = numpy.empty((len(bins), len(bins)))
 
     # Create comparison matrix
     row = 0
-    for ecu_1 in bins:
+    for ecu_1 in bins.values():
         col = 0
 
-        for ecu_2 in bins:
+        for ecu_2 in bins.values():
             matrix[row][col] = jaccard_index(ecu_1.rvector_hashes, ecu_2.rvector_hashes)
             col += 1
         row += 1
@@ -443,34 +553,105 @@ def cluster_bins(bins):
         n_clusters=None, compute_full_tree=True, distance_threshold=0.8, linkage='single'
     ).fit(matrix).labels_
 
+    # Split bins into found clusters
     for i in range(len(ac_clusters)):
         if ac_clusters[i] not in clusters:
             clusters[ac_clusters[i]] = []
-        clusters[ac_clusters[i]].append(bins[i])
+        index = list(bins.keys())[i]
+        clusters[ac_clusters[i]].append(bins[index])
 
     return clusters
 
-def print_clusters(clusters):
+def setup_r2(file_path):
     """
-    Output clustering results
-    :param clusters: Clusters built from cluster_bins()
+    radare2 helper for M7700 setup
+    :param file_path: Full path to binary to load
     """
-    for cluster_num, bins in sorted(clusters.items()):
-        print("Cluster {}".format(cluster_num + 1))
+    r2 = r2pipe.open(file_path)
+    r2.cmd('e asm.arch=m7700')
+    r2.cmd('e anal.limits=true')
+    r2.cmd('e anal.from=0x8000')
+    r2.cmd('e anal.to=0xffd0')
 
-        for bin in bins:
-            print("\t{}".format(bin.name))
+    return r2
 
 if __name__ == '__main__':
-    bins = []
+    bins = {}
+    clusters = []
 
     # Analyze all binaries
-    for filename in os.listdir("./bins"):
-        r2 = r2pipe.open("./bins/{}".format(filename))
-        bins.append(EcuFile(filename, r2))
+    for filename in os.listdir(BIN_DIR):
+        bins[filename] = EcuFile(filename, setup_r2("{}/{}".format(BIN_DIR, filename)))
 
         print("Loaded {}".format(filename))
 
-    clusters = cluster_bins(bins)
+    # Create Cluster instances for grouped bins
+    print("\nFound clusters:")
+    for num, cluster_bins in cluster_bins(bins).items():
+        if len(cluster_bins) >= 3:
+            cluster = Cluster(cluster_bins)
+            clusters.append(cluster)
+            print(cluster)
 
-    print_clusters(clusters)
+    # Load & setup control manual analysis
+    with open("controls.json") as file:
+        controls_js = json.load(file)
+
+        for control_filename, params in controls_js.items():
+            split = control_filename.split('-')
+            engine = split[len(split) - 1].split('.')[0]
+
+            # Set control file for each cluster
+            for cluster in clusters:
+                if any(x for x in cluster.bins if engine in x.name):
+                    cluster.sensors = params["sensors"]
+                    cluster.control = EcuFile(
+                        control_filename, setup_r2("{}/{}".format(BIN_DIR, control_filename)), params["sensor_functions"]
+                    )
+                    print("Set {} as control for Cluster {}".format(cluster.control.name, cluster.id))
+
+    with open("functions.json") as file:
+        functions_js = json.load(file)
+
+        # Analyze all bin files
+        for filename, function_list in functions_js.items():
+            if filename not in bins:
+                continue
+            bins[filename].functions = {}
+
+            r2 = setup_r2("{}/{}".format(BIN_DIR, filename))
+
+            # Analyze all functions for each file
+            for function, hashes in function_list.items():
+                if hashes == "[]":
+                    continue
+
+                r2.cmd("s {}".format(function))
+                r2.cmd('aa')
+
+                fcn = Function(function, Cfg(json.loads(
+                    str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
+                )))
+
+                hashes = hashes[1:-1].split(',')
+                hashes = [x.replace('\'', '') for x in hashes]
+                hashes = [x.strip(' ') for x in hashes]
+                fcn.hashes = hashes
+
+                bins[filename].functions[function] = fcn
+            r2.quit()
+            print("Loaded functions for {}".format(filename))
+
+        # Match up functions & gather corrosponding sensor addresses
+        for cluster in clusters:
+            cluster.match_functions(bins)
+            cluster.match_sensors()
+
+    # Output formatted results
+    with open("cluster_matches.json", "w") as outfile:
+        results = {}
+
+        for cluster in clusters:
+            results["Cluster {}".format(cluster.id)] = cluster.sensor_matches
+
+        json.dump(results, outfile, indent=4)

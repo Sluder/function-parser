@@ -1,0 +1,25 @@
+{
+  "744014-1995-JDM-Wrx-EJ20T.bin": {
+    "rom_start": "0x9000",
+		"sensor_functions": {
+			"batt_voltage": ["0x9a50", "0xa20b", "0xa000", "0xa0f0", "0xabfe", "0xd809", "0xddf8"],
+			"vehicle_speed": ["0x9c10", "0x9f13", "0xa1b7", "0xa633", "0xad12", "0xb500", "0xb91b"],
+			"engine_speed": ["0x9cbe", "0xa31a", "0xa633", "0xadf3", "0xb4c2", "0xb87e", "0xc0d1"],
+			"water_temp": ["0x9b7c", "0xa90b"],
+			"ignition_timing": ["0xf91b", "0xf93f"],
+			"airflow": ["0xdb5b"],
+			"throttle_position": ["0xdd53"],
+			"knock_correction": ["0xb2f3"]
+		},
+		"sensors": {
+			"batt_voltage": "0x1170",
+			"vehicle_speed": "0x1075",
+			"engine_speed": "0x1073",
+			"water_temp": "0x11a2",
+			"ignition_timing": "0x109e",
+			"airflow": "0x1307",
+			"throttle_position": "0x1329",
+			"knock_correction": "0x1328"
+		}
+  }
+}

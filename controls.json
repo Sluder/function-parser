@@ -1,13 +1,6 @@
 {
 	"722527-1993-USDM-SVX-EG33.bin": {
-        "engine": "EG33",
-        "year": 1993,
-        "ROM_ID": "722527",
-        "RST_VECTOR": 	  "0x93c1",
-        "ROM_Start": 	  "0x9000",
-        "JSR_Loop": 	  "0x96e0",
-		"Maintenance_Func": "0x9725",
-		
+    "rom_start": "0x9000",
 		"sensor_functions": {
 			"batt_voltage": ["0x9a60", "0x9f5b", "0xa166", "0xa307", "0xaea9", "0xd982", "0xe25b"],
 			"vehicle_speed": ["0x9bf9", "0x9dd5", "0xa59d", "0xa9a7", "0xb05d", "0xb613", "0xb960"],
@@ -28,26 +21,19 @@
 			"throttle_position": "0x128c",
 			"knock_correction": "0x12a7"
 		}
-    },
-        
-    "744042-1994-UKDM-Wrx-EJ20.bin":{
-        "engine": "EJ20",
-        "year": 1994,
-        "ROM_ID": "744042",
-        "RST_VECTOR": "0x9414",
-        "ROM_Start": "0x9000",
-
+  },
+	"744014-1995-JDM-Wrx-EJ20T.bin": {
+    "rom_start": "0x9000",
 		"sensor_functions": {
-			"batt_voltage": ["0x9a41", "0x9fdd", "0xa168", "0xa258", "0xad6c", "d954", "0xdf3e"],
-			"vehicle_speed": ["0x9d04", "0x9f07", "0xa31f", "0xa7a1", "0xae80", "0xb623", "0xba3e"],
-			"engine_speed": ["0xa31f", "0xa482", "0xa7a1", "0xaf61", "0xb5e5", "0xb9a1", "0xc1e2"],
-			"water_temp": ["0x9b70", "0xaa79"],
-			"ignition_timing": ["0xf9b6", "0xf9da"],
-			"airflow": ["0xdca1"],
-			"throttle_position": ["0xde99"],
-			"knock_correction": ["0xb416"]
+			"batt_voltage": ["0x9a50", "0xa20b", "0xa000", "0xa0f0", "0xabfe", "0xd809", "0xddf8"],
+			"vehicle_speed": ["0x9c10", "0x9f13", "0xa1b7", "0xa633", "0xad12", "0xb500", "0xb91b"],
+			"engine_speed": ["0x9cbe", "0xa31a", "0xa633", "0xadf3", "0xb4c2", "0xb87e", "0xc0d1"],
+			"water_temp": ["0x9b7c", "0xa90b"],
+			"ignition_timing": ["0xf91b", "0xf93f"],
+			"airflow": ["0xdb5b"],
+			"throttle_position": ["0xdd53"],
+			"knock_correction": ["0xb2f3"]
 		},
-		
 		"sensors": {
 			"batt_voltage": "0x1170",
 			"vehicle_speed": "0x1075",
@@ -58,16 +44,10 @@
 			"throttle_position": "0x1329",
 			"knock_correction": "0x1328"
 		}
-    },
-    
-    "733257-1993-Canada-Legacy-EJ22.bin": {
-        "engine": "EJ22",
-        "year": 1993,
-		"ROM_ID": "733257",
-		"RST_VECTOR": "0x8f08",
-        "ROM_Start addr": "0x8f08",
-        
-        "sensor_functions": {
+  },
+  "733257-1993-Canada-Legacy-EJ22.bin": {
+    "rom_start": "0x8f08",
+    "sensor_functions": {
 			"batt_voltage": ["0x9a7d", "0x9f77", "0xa0ff", "0xa1ca", "0xaeba", "0xdab0", "0xe14f"],
 			"vehicle_speed": ["0x9c2a", "0x9e7b", "0xbb22", "0xa63d", "0xaf8b", "0xb6e9", "???"],
 			"engine_speed": ["0xfb73", "0xa324", "0xa63d", "0xb021", "0xb6c2", "???", "0xf48a"],
@@ -77,7 +57,6 @@
 			"throttle_position": ["0xe0ab"],
 			"knock_correction": ["0xb510"]
 		},
-		
 		"sensors": {
 			"batt_voltage": "0x116b",
 			"vehicle_speed": "0x1075",
@@ -88,6 +67,5 @@
 			"throttle_position": "0x1329",
 			"knock_correction": "0x1328"
 		}
-    }
+  }
 }
-
