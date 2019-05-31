@@ -137,12 +137,12 @@ class Block:
         return ret
 
     def __str__(self):
-        ret = "Addr: 0x{:04x}\n".format(self.base_addr)
+        ret = "Addr: 0x{}\n".format(self.base_addr)
 
         if self.fail:
-            ret += "\tFail: 0x{:04x}\n".format(self.fail.base_addr)
+            ret += "\tFail: 0x{}\n".format(self.fail.base_addr)
         if self.jump:
-            ret += "\tJump: 0x{:04x}\n".format(self.jump.base_addr)
+            ret += "\tJump: 0x{}\n".format(self.jump.base_addr)
 
         return ret
 
@@ -190,12 +190,13 @@ class Cfg:
                 self.blocks = dict_block
                 self.first = dict_block[(int(self.base_addr, 16))][0]
 
-    def get_feature(self, block, sensor_addr=None, visited_blocks=[]):
-        """
-        :param block: Current block to get feature for (Start with self.first)
-        :param sensor_addr: Sensor address to filter features for
-        """
+    def get_control_features(self, block, sensor_addr=None, visited_blocks=None):
         features = {}
+        sensor_addr = sensor_addr.lower()
+
+        # Reset visited blocks
+        if visited_blocks == None:
+            visited_blocks = []
 
         if block is not None:
             instructions = block.instructions
@@ -203,36 +204,61 @@ class Cfg:
 
             for address, inst in instructions.items():
                 for operand in inst.operands:
-                    # Look for a specific address if provided
-                    if sensor_addr is not None:
-                        if sensor_addr.lower() in features.keys() and sensor_addr.lower() in operand.lower():
-                            features[str(sensor_addr)].update(block.gen_features(inst))
-                        else:
-                            if sensor_addr.lower() in operand.lower():
-                                features[str(sensor_addr)] = block.gen_features(inst)
-                    else:
-                        # If operand is an address, could be a sensor address
-                        if operand not in features.keys() and operand.startswith("0x"):
-                            if int(operand, 16) < 0x6000:
-                                features[str(operand)] = block.gen_features(inst)
+                    operand = operand.lower()
 
-                        elif operand in features.keys():
-                            features[str(operand)].update(block.gen_features(inst))
+                    if sensor_addr in operand:
+                        if sensor_addr in features.keys():
+                            if sensor_addr in operand:
+                                features[operand].update(block.gen_features(inst))
+                        elif sensor_addr in operand:
+                            features[sensor_addr] = block.gen_features(inst)
 
-                        elif operand.startswith("$0x"):
-                            hex = operand[1:]
-                            if int(hex, 16) < 0x6000:
-                                if hex not in features.keys():
-                                    features[str(hex)] = block.gen_features(inst)
-                                else:
-                                    features[str(hex)].update(block.gen_features(inst))
+            # Jump to connected blocks
+            if block.jump is not None and block.jump not in visited_blocks:
+                features.update(self.get_control_features(block.jump, sensor_addr, visited_blocks))
+            if block.fail is not None and block.fail not in visited_blocks:
+                features.update(self.get_control_features(block.fail, sensor_addr, visited_blocks))
+
+        return features
+
+    def get_features(self, block, visited_blocks=None):
+        """
+        :param block: Current block to get feature for (Start with self.first)
+        :param sensor_addr: Sensor address to filter features for
+        """
+        features = {}
+
+        # Reset visited blocks
+        if visited_blocks == None:
+            visited_blocks = []
+
+        if block is not None:
+            instructions = block.instructions
+            visited_blocks.append(block)
+
+            for address, inst in instructions.items():
+                for operand in inst.operands:
+                    # If operand is an address, could be a sensor address
+                    if operand not in features.keys() and operand.startswith("0x"):
+                        if int(operand, 16) < 0x6000:
+                            features[str(operand)] = block.gen_features(inst)
+
+                    elif operand in features.keys():
+                        features[str(operand)].update(block.gen_features(inst))
+
+                    elif operand.startswith("$0x"):
+                        hex = operand[1:]
+                        if int(hex, 16) < 0x6000:
+                            if hex not in features.keys():
+                                features[str(hex)] = block.gen_features(inst)
+                            else:
+                                features[str(hex)].update(block.gen_features(inst))
 
             # Recurse through connected blocks for features
-            # if sensor_addr is None or (sensor_addr is not None and not sensor_found):
             if block.jump is not None and block.jump not in visited_blocks:
-                features.update(self.get_feature(block.jump, sensor_addr, visited_blocks))
+                features.update(self.get_features(block.jump, visited_blocks))
             if block.fail is not None and block.fail not in visited_blocks:
-                features.update(self.get_feature(block.fail, sensor_addr, visited_blocks))
+                features.update(self.get_features(block.fail, visited_blocks))
 
         return features
 
@@ -258,14 +284,22 @@ class Function:
         self.parents = {}
         self.cfg = cfg
 
-    def get_features(self, sensor_addr=None):
+    def get_ctrl_features(self, sensor_addr):
         """
-        Gets all features for sensor address candidates
+        Gets all features for a sensor
         :param sensor_addr: Sensor address to filter features for
         """
         if not self.cfg.first:
             return {}
-        return self.cfg.get_feature(self.cfg.first, sensor_addr)
+        return self.cfg.get_control_features(self.cfg.first, sensor_addr)
+
+    def get_features(self):
+        """
+        Gets all features for sensor address candidates
+        """
+        if not self.cfg.first:
+            return {}
+        return self.cfg.get_features(self.cfg.first)
 
 class EcuFile:
     def __init__(self, filename, r2, sensor_functions=None):
@@ -406,6 +440,7 @@ class Cluster:
         matches = {}
 
         for bin in self.bins:
+            print("Matching functions for {}".format(bin.filename))
             matches[bin.filename] = []
 
             for sensor, sensor_fcns in self.control.sensors.items():
@@ -414,7 +449,7 @@ class Cluster:
                     sensor_fcn.sensor = sensor
 
                     # Function doesnt exist in hashes, so skip
-                    if sensor_fcn.base_addr not in control_bin.functions:
+                    if sensor_fcn.base_addr not in control_bin.functions.keys():
                         # TODO: try to find actual fcn address & get hashes?
                         continue
                     control_hashes = control_bin.functions[sensor_fcn.base_addr].hashes
@@ -429,7 +464,7 @@ class Cluster:
                             highest_jaccard = value
                             chosen_fcn = test_fcn
                     matches[bin.filename].append({sensor_fcn: chosen_fcn})
-            print("Matched functions for {}".format(bin.filename))
+
         self.fcn_matches = matches
 
         return matches
@@ -452,15 +487,14 @@ class Cluster:
             print("Matching sensor addresses for {}".format(filename))
 
             for match in fcn_matches:
-                highest_jaccard = 0
-                matched_addr = '0x0000'
-
-                # For matched functions found from match_functions()
                 for control_fcn, matched_fcn in match.items():
                     sensor_addr = self.sensors[control_fcn.sensor]
 
-                    control_features = control_fcn.get_features(sensor_addr)
+                    control_features = control_fcn.get_ctrl_features(sensor_addr)
                     match_features = matched_fcn.get_features()
+
+                    # if control_fcn.sensor == 'throttle_position':
+                    #     print(control_features)
 
                     for addr, addr_features in match_features.items():
                         # Average the 'pre' & 'post' features
@@ -475,11 +509,7 @@ class Cluster:
                         except:
                             average = 0
 
-                        if average > highest_jaccard:
-                            highest_jaccard = average
-                            matched_addr = addr
-                    matches[filename][control_fcn.sensor][matched_addr] = round(highest_jaccard, 2)
-
+                        matches[filename][control_fcn.sensor][addr] = round(average, 2)
         self.sensor_matches = matches
         self.cleanup_sensor_matches()
 
@@ -518,6 +548,9 @@ def jaccard_index(list_1, list_2):
     :param list_1, list_2: Lists to compare
     :returns: Jaccard index of list_1 & list_2
     """
+    if list_1 == [] and list_2 == []:
+        return 1.0
+
     if len(list_1) < len(list_2):
         intersection = len([x for x in list_1 if x in list_2])
     else:
@@ -655,3 +688,4 @@ if __name__ == '__main__':
             results["Cluster {}".format(cluster.id)] = cluster.sensor_matches
 
         json.dump(results, outfile, indent=4)
+        print("Write results to cluster_matches.json")
