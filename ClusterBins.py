@@ -619,15 +619,15 @@ def analyze_bins():
 
     return bins
 
-def build_clusters():
+def build_clusters(bins):
     """
     Builds Cluster instances from grouped binaries
     """
     clusters = []
 
-    for num, cluster_bins in cluster_bins(bins).items():
-        if len(cluster_bins) >= 3:
-            cluster = Cluster(cluster_bins)
+    for num, clustered_bins in cluster_bins(bins).items():
+        if len(clustered_bins) >= 3:
+            cluster = Cluster(clustered_bins)
             clusters.append(cluster)
             print(cluster)
 
@@ -656,6 +656,7 @@ def set_cluster_controls(clusters):
 
 def analyze_functions(bins):
     """
+    Loads all function hashes and sets to corresponding EcuFile
     :param bins: List of EcuFile bins {filename: EcuFile instance}
     """
     with open("functions.json") as file:
@@ -707,10 +708,10 @@ def write_clusters(clusters):
 if __name__ == '__main__':
     bins = analyze_bins()
 
-    clusters = build_clusters()
+    clusters = build_clusters(bins)
     set_cluster_controls(clusters)
+    analyze_functions(bins)
 
-    # Match up functions & gather corrosponding sensor addresses
     for cluster in clusters:
         cluster.match_functions(bins)
         cluster.match_sensors()
