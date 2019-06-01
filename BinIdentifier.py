@@ -493,9 +493,6 @@ class Cluster:
                     control_features = control_fcn.get_ctrl_features(sensor_addr)
                     match_features = matched_fcn.get_features()
 
-                    # if control_fcn.sensor == 'throttle_position':
-                    #     print(control_features)
-
                     for addr, addr_features in match_features.items():
                         # Average the 'pre' & 'post' features
                         try:

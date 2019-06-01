@@ -330,6 +330,7 @@ class CFG:
         if blk is not None:
             il = blk.seq_inst
             feature_visited.append(blk)
+
             for instr in il.items():
                 for param in instr[1].params:
                     if sensor.lower() in features.keys():
