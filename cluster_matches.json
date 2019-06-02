@@ -8,27 +8,27 @@
             "ignition_timing": "0x10a2",
             "airflow": "0x1283",
             "throttle_position": "0x128c",
-            "knock_correction": {}
+            "knock_correction": "0x1051"
         },
         "742521-1994-USDM-SVX-EG33.bin": {
-            "batt_voltage": "0x102f",
+            "batt_voltage": "0x10b4",
             "vehicle_speed": "0x1071",
             "engine_speed": "0x106f",
             "water_temp": "0x1185",
-            "ignition_timing": "0x11ac",
+            "ignition_timing": "0x11a7",
             "airflow": "0x1283",
             "throttle_position": "0x128c",
-            "knock_correction": {}
+            "knock_correction": "0x1071"
         },
         "722527-1993-USDM-SVX-EG33.bin": {
-            "batt_voltage": "0x102f",
-            "vehicle_speed": "0x1071",
-            "engine_speed": "0x106f",
+            "batt_voltage": "0x10b4",
+            "vehicle_speed": "0x1282",
+            "engine_speed": "0x12b9",
             "water_temp": "0x1185",
             "ignition_timing": "0x10a2",
             "airflow": "0x1283",
             "throttle_position": "0x128c",
-            "knock_correction": {}
+            "knock_correction": "0x12a7"
         },
         "722515-1992-JDM-SVX-EG33.bin": {
             "batt_voltage": "0x102f",
@@ -36,29 +36,29 @@
             "engine_speed": "0x106f",
             "water_temp": "0x1185",
             "ignition_timing": "0x10a2",
-            "airflow": "0x564b",
+            "airflow": "0x103a",
             "throttle_position": "0x128c",
-            "knock_correction": {}
+            "knock_correction": "0x1051"
         },
         "722531-1996-UK-SVX-EG33.bin": {
-            "batt_voltage": "0x102f",
-            "vehicle_speed": "0x1071",
+            "batt_voltage": "0x1186",
+            "vehicle_speed": "0x106e",
             "engine_speed": "0x106f",
             "water_temp": "0x1185",
             "ignition_timing": "0x10a2",
             "airflow": "0x1283",
             "throttle_position": "0x128c",
-            "knock_correction": {}
+            "knock_correction": "0x1089"
         },
         "742541-1994-MidEast-SVX-EG33.bin": {
             "batt_voltage": "0x102f",
-            "vehicle_speed": "0x1071",
-            "engine_speed": "0x106f",
+            "vehicle_speed": "0x105c",
+            "engine_speed": "0x12b9",
             "water_temp": "0x1185",
             "ignition_timing": "0x10a2",
             "airflow": "0x1283",
             "throttle_position": "0x128c",
-            "knock_correction": {}
+            "knock_correction": "0x1134"
         },
         "722521-1991-USDM-SVX-EG33.bin": {
             "batt_voltage": "0x10b4",
@@ -68,7 +68,7 @@
             "ignition_timing": "0x105b",
             "airflow": "0x1283",
             "throttle_position": "0x128c",
-            "knock_correction": {}
+            "knock_correction": "0x1256"
         },
         "722525-1992-USDM-SVX-EG33.bin": {
             "batt_voltage": "0x102f",
@@ -78,39 +78,39 @@
             "ignition_timing": "0x10a2",
             "airflow": "0x1283",
             "throttle_position": "0x128c",
-            "knock_correction": {}
+            "knock_correction": "0x1237"
         }
     },
     "Cluster 2": {
         "74401E-1996-JDM-WrxSTiV2RA-7K.bin": {
             "batt_voltage": "0x1170",
             "vehicle_speed": "0x1075",
-            "engine_speed": "0x1073",
+            "engine_speed": "0x1196",
             "water_temp": "0x11a2",
             "ignition_timing": "0x109e",
-            "airflow": {},
-            "throttle_position": {},
-            "knock_correction": {}
+            "airflow": "0x1307",
+            "throttle_position": "0x12c6",
+            "knock_correction": "0x1328"
         },
         "744014-1995-JDM-Wrx-EJ20T.bin": {
             "batt_voltage": "0x1170",
             "vehicle_speed": "0x1075",
-            "engine_speed": "0x1073",
+            "engine_speed": "0x1196",
             "water_temp": "0x11a2",
             "ignition_timing": "0x109e",
-            "airflow": {},
-            "throttle_position": {},
-            "knock_correction": {}
+            "airflow": "0x1307",
+            "throttle_position": "0x12c6",
+            "knock_correction": "0x1328"
         },
         "74401A-1995-JDM-WrxRA-EJ20T.bin": {
             "batt_voltage": "0x1170",
             "vehicle_speed": "0x1075",
-            "engine_speed": "0x1073",
+            "engine_speed": "0x1196",
             "water_temp": "0x11a2",
             "ignition_timing": "0x109e",
-            "airflow": {},
-            "throttle_position": {},
-            "knock_correction": {}
+            "airflow": "0x1307",
+            "throttle_position": "0x12c6",
+            "knock_correction": "0x1328"
         },
         "744011-1994-JDM-Wrx-EJ20T.bin": {
             "batt_voltage": "0x1170",
@@ -118,51 +118,51 @@
             "engine_speed": "0x1073",
             "water_temp": "0x11a2",
             "ignition_timing": "0x109e",
-            "airflow": {},
-            "throttle_position": {},
-            "knock_correction": {}
+            "airflow": "0x11fd",
+            "throttle_position": "0x120a",
+            "knock_correction": "0x1328"
         }
     },
     "Cluster 3": {
         "733257-1993-Canada-Legacy-EJ22.bin": {
-            "batt_voltage": "0x116b",
+            "batt_voltage": "0x10b8",
             "vehicle_speed": "0x1075",
             "engine_speed": "0x1073",
             "water_temp": "0x11a9",
-            "ignition_timing": {},
-            "airflow": {},
-            "throttle_position": {},
-            "knock_correction": {}
+            "ignition_timing": "0x109e",
+            "airflow": "0x1307",
+            "throttle_position": "0x1031",
+            "knock_correction": "0x1270"
         },
         "7232A5-1992-UK-Legacy-EJ22.bin": {
             "batt_voltage": "0x1170",
             "vehicle_speed": "0x1075",
             "engine_speed": "0x1073",
-            "water_temp": "0x105e",
-            "ignition_timing": {},
-            "airflow": {},
+            "water_temp": "0x11b0",
+            "ignition_timing": "0x109e",
+            "airflow": "0x1033",
             "throttle_position": {},
-            "knock_correction": {}
+            "knock_correction": "0x105e"
         },
         "7237A2-1992-EDM-Legacy-EJ20.bin": {
             "batt_voltage": "0x1170",
             "vehicle_speed": "0x1075",
             "engine_speed": "0x1073",
-            "water_temp": "0x105e",
-            "ignition_timing": {},
-            "airflow": {},
-            "throttle_position": {},
-            "knock_correction": {}
+            "water_temp": "0x11b0",
+            "ignition_timing": "0x109e",
+            "airflow": "0x103a",
+            "throttle_position": "0x128a",
+            "knock_correction": "0x1132"
         },
         "7237A5-1992-EDM-Legacy-EJ20.bin": {
             "batt_voltage": "0x1170",
             "vehicle_speed": "0x1075",
             "engine_speed": "0x1073",
-            "water_temp": "0x105e",
-            "ignition_timing": {},
-            "airflow": {},
+            "water_temp": "0x11b0",
+            "ignition_timing": "0x109e",
+            "airflow": "0x103a",
             "throttle_position": {},
-            "knock_correction": {}
+            "knock_correction": "0x105e"
         }
     }
 }

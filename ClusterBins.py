@@ -6,6 +6,7 @@ import json
 import numpy
 import pandas
 import operator
+import hashlib
 from collections import OrderedDict, Counter
 from sklearn.cluster import AgglomerativeClustering
 from itertools import count
@@ -36,15 +37,18 @@ class Block:
         for inst in instruction_js:
             self.instructions[inst['offset']] = Instruction(inst['offset'], inst['opcode'])
 
-    def get_opcodes(self):
+    def get_opcodes(self, should_hash=True):
         """
         String representation of block instructions
+        :param should_hash: Whether opcodes should be MD5 hashed
         """
         opcodes = ""
 
         for instruction in self.instructions.values():
             opcodes = opcodes + str(instruction.opcode)
 
+        if should_hash:
+            return hashlib.md5(opcodes.encode()).hexdigest()
         return opcodes
 
     def n_grams(self, stop_addr=None, get_first_ops=True, n_grams=2):
@@ -233,7 +237,7 @@ class Cfg:
         """
         features = {}
 
-        # Reset visited blocks
+        # Reset visited blocks on first call
         if visited_blocks == None:
             visited_blocks = []
 
@@ -245,7 +249,7 @@ class Cfg:
                 for operand in inst.operands:
                     # If operand is an address, could be a sensor address
                     if operand not in features.keys() and operand.startswith("0x"):
-                        if int(operand, 16) < 0x6000:
+                        if int(operand, 16) >= 0x1000 and int(operand, 16) <= 0x14ff:
                             features[str(operand)] = block.gen_features(inst)
 
                     elif operand in features.keys():
@@ -253,7 +257,7 @@ class Cfg:
 
                     elif operand.startswith("$0x"):
                         hex = operand[1:]
-                        if int(hex, 16) < 0x6000:
+                        if int(hex, 16) >= 0x1000 and int(hex, 16) <= 0x14ff:
                             if hex not in features.keys():
                                 features[str(hex)] = block.gen_features(inst)
                             else:
@@ -266,6 +270,30 @@ class Cfg:
                 features.update(self.get_features(block.fail, visited_blocks))
 
         return features
+
+    def get_hashes(self, current_block, visited_blocks=None):
+        """
+        :param current_block: Current block to build hashes for
+        :param vistited_list: List of Block instances already visited
+        """
+        hashes = []
+
+        if current_block == None:
+            return []
+
+        # Reset visited blocks on first call
+        if visited_blocks == None:
+            visited_blocks = []
+
+        hashes.append(current_block.get_opcodes())
+        visited_blocks.append(current_block)
+
+        if current_block.jump is not None and current_block.jump not in visited_blocks:
+            hashes.extend(self.get_hashes(current_block.jump, visited_blocks))
+        if current_block.fail is not None and current_block.fail not in visited_blocks:
+            hashes.extend(self.get_hashes(current_block.fail, visited_blocks))
+
+        return hashes
 
     def __str__(self):
         ret = ""
@@ -316,6 +344,7 @@ class EcuFile:
 
         r2 = setup_r2("./bins/{}".format(filename))
 
+        self.get_rom_start(r2)
         self.get_rvector_location(r2)
         self.get_rvector_calls(r2)
         self.analyze_rvector(r2)
@@ -324,6 +353,16 @@ class EcuFile:
         # Only called if this bin is the control for a cluster
         if sensor_functions:
             self.load_sensors(r2, sensor_functions)
+
+    def get_rom_start(self, r2):
+        """
+        Gets the address of code start
+        """
+        inst = str(r2.cmd('/c CMP al #0xf0'), 'ISO-8859-1')
+        if inst is "":
+            inst = str(r2.cmd('/c CMP ax #0xf0f0'), 'ISO-8859-1')
+
+        self.rom_start = int(inst.split()[0], 16)
 
     def get_rvector_location(self, r2):
         """
@@ -448,16 +487,23 @@ class Cluster:
             print("Matching functions for {}".format(bin.filename))
             matches[bin.filename] = []
 
+            r2 = setup_r2("{}/{}".format(BIN_DIR, bin.filename))
+
             for sensor, sensor_fcns in self.control.sensors.items():
                 for sensor_fcn in sensor_fcns:
                     control_bin = bins[self.control.filename]
                     sensor_fcn.sensor = sensor
 
-                    # Function doesnt exist in hashes, so skip
-                    if sensor_fcn.base_addr not in control_bin.functions.keys():
-                        # TODO: try to find actual fcn address & get hashes?
-                        continue
-                    control_hashes = control_bin.functions[sensor_fcn.base_addr].hashes
+                    if sensor_fcn.base_addr in control_bin.functions.keys():
+                        control_hashes = control_bin.functions[sensor_fcn.base_addr].hashes
+                    else:
+                        r2.cmd("s {}".format(sensor_fcn.base_addr))
+                        r2.cmd('aa')
+
+                        cfg = Cfg(json.loads(
+                            str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
+                        ))
+                        control_hashes = cfg.get_hashes(cfg.first)
 
                     highest_jaccard = 0
                     chosen_fcn = None
@@ -469,6 +515,8 @@ class Cluster:
                             highest_jaccard = value
                             chosen_fcn = test_fcn
                     matches[bin.filename].append({sensor_fcn: chosen_fcn})
+                    # print('{} {} - {}', bin.filename, sensor_fcn.base_addr, chosen_fcn.base_addr)
+            r2.quit()
 
         self.fcn_matches = matches
 
@@ -494,6 +542,9 @@ class Cluster:
             for match in fcn_matches:
                 for control_fcn, matched_fcn in match.items():
                     sensor_addr = self.sensors[control_fcn.sensor]
+
+                    if matched_fcn == None:
+                        continue
 
                     control_features = control_fcn.get_ctrl_features(sensor_addr)
                     match_features = matched_fcn.get_features()
