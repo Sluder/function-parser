@@ -7,6 +7,7 @@ import numpy
 import pandas
 import operator
 import hashlib
+import argparse
 from collections import OrderedDict, Counter
 from sklearn.cluster import AgglomerativeClustering
 from itertools import count
@@ -51,33 +52,23 @@ class Block:
             return hashlib.md5(opcodes.encode()).hexdigest()
         return opcodes
 
-    def n_grams(self, stop_addr=None, get_first_ops=True, n_grams=2):
+    def n_grams(self, stop_addr=None):
+        """
+        Creates list of opcodes for this blocks instructions
+        :param stop_addr: Address to stop grabbing opcodes
+        """
         opcodes = []
 
-        if stop_addr is None:
-            for instruction in self.instructions.values():
-                opcodes.append(instruction.opcode)
-        else:
-            if get_first_ops:
-                for address, instruction in self.instructions.items():
-                    if address == stop_addr:
-                        break
-                    opcodes.append(instruction.opcode)
-            else:
-                skip = False
-
-                for address, instruction in self.instructions.items():
-                    if address == stop_addr:
-                        skip = True
-                    elif skip:
-                        opcodes.append(instruction.opcode)
+        for address, instruction in self.instructions.items():
+            if stop_addr is not None and address == stop_addr:
+                break
+            opcodes.append(instruction.opcode)
 
         return opcodes
 
     def gen_features(self, inst, depth=1):
         """
         :param inst: Instruction instance to get features for
-        :param sensor_addr: Str of sensor address to find
         :param depth: Number of blocks to get features from before/after inst
         """
         features = {"pre":[], 'post':[]}
@@ -124,7 +115,7 @@ class Block:
         :param depth: Number of blocks to get features from before/after inst
         """
         ret = []
-        ret.extend(self.n_grams(instruction_addr, False))
+        ret.extend(self.n_grams(instruction_addr))
 
         if self.fail is not None:
             ret.extend(self.fail.n_grams())
@@ -384,7 +375,9 @@ class EcuFile:
 
         # Get 1000 instructions due to radare2 stopping too early with analysis
         # Fix was to use command 'afu' to resize function after finding main loop
-        instructions = json.loads(str(r2.cmd('pdj 1000'), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict)
+        instructions = json.loads(
+            str(r2.cmd('pdj 1000'), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
+        )
         calls = []
         stores = 0
         watch = False
@@ -494,6 +487,7 @@ class Cluster:
                     control_bin = bins[self.control.filename]
                     sensor_fcn.sensor = sensor
 
+                    # Get hashes of CFG if the functions file didnt have it
                     if sensor_fcn.base_addr in control_bin.functions.keys():
                         control_hashes = control_bin.functions[sensor_fcn.base_addr].hashes
                     else:
@@ -508,6 +502,7 @@ class Cluster:
                     highest_jaccard = 0
                     chosen_fcn = None
 
+                    # Test all functions against the control function
                     for test_fcn in bin.functions.values():
                         value = jaccard_index(control_hashes, test_fcn.hashes)
 
@@ -522,9 +517,10 @@ class Cluster:
 
         return matches
 
-    def match_sensors(self):
+    def match_sensors(self, should_simplify):
         """
-        Find corrosponding sensor addresses using the matched functions
+        Find corresponding sensor addresses using the matched functions
+        :param should_simplify: Whether results should only show found sensors
         """
         matches = {}
 
@@ -564,11 +560,13 @@ class Cluster:
 
                         matches[filename][control_fcn.sensor][addr] = round(average, 2)
         self.sensor_matches = matches
-        self.cleanup_sensor_matches()
+
+        if should_simplify:
+            self.cleanup_sensor_matches()
 
     def cleanup_sensor_matches(self):
         """
-        Helper to simplify sensor matches json
+        Helper to simplify sensor matches JSON
         """
         for filename, sensor_matches in self.sensor_matches.items():
             for sensor, matches in sensor_matches.items():
@@ -662,6 +660,9 @@ def setup_r2(file_path):
     return r2
 
 def analyze_bins():
+    """
+    Create EcuFile instances for bins in the directory
+    """
     bins = {}
 
     for filename in os.listdir(BIN_DIR):
@@ -673,6 +674,7 @@ def analyze_bins():
 def build_clusters(bins):
     """
     Builds Cluster instances from grouped binaries
+    :param bins: List of EcuFile instances
     """
     clusters = []
 
@@ -757,6 +759,10 @@ def write_clusters(clusters):
         print("Write results to cluster_matches.json")
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Cluster M7700 binaries & find sensor addresses')
+    parser.add_argument('-s', action='store_true', help='simplify sensor findings output')
+    args = parser.parse_args()
+
     bins = analyze_bins()
 
     clusters = build_clusters(bins)
@@ -765,6 +771,6 @@ if __name__ == '__main__':
 
     for cluster in clusters:
         cluster.match_functions(bins)
-        cluster.match_sensors()
+        cluster.match_sensors(args.s)
 
     write_clusters(clusters)
