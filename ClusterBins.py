@@ -12,6 +12,7 @@ from collections import OrderedDict, Counter
 from sklearn.cluster import AgglomerativeClustering
 from itertools import count
 
+# Full path to bin directory
 BIN_DIR = './bins'
 
 class Instruction:
@@ -134,9 +135,9 @@ class Block:
         ret = "Addr: 0x{}\n".format(self.base_addr)
 
         if self.fail:
-            ret += "\tFail: 0x{}\n".format(self.fail.base_addr)
+            ret += "\tFail: {}\n".format(self.fail.base_addr)
         if self.jump:
-            ret += "\tJump: 0x{}\n".format(self.jump.base_addr)
+            ret += "\tJump: {}\n".format(self.jump.base_addr)
 
         return ret
 
@@ -262,7 +263,7 @@ class Cfg:
 
         return features
 
-    def get_hashes(self, current_block, visited_blocks=None):
+    def get_opcode_hashes(self, current_block, visited_blocks=None):
         """
         :param current_block: Current block to build hashes for
         :param vistited_list: List of Block instances already visited
@@ -280,9 +281,38 @@ class Cfg:
         visited_blocks.append(current_block)
 
         if current_block.jump is not None and current_block.jump not in visited_blocks:
-            hashes.extend(self.get_hashes(current_block.jump, visited_blocks))
+            hashes.extend(self.get_opcode_hashes(current_block.jump, visited_blocks))
         if current_block.fail is not None and current_block.fail not in visited_blocks:
-            hashes.extend(self.get_hashes(current_block.fail, visited_blocks))
+            hashes.extend(self.get_opcode_hashes(current_block.fail, visited_blocks))
+
+        return hashes
+
+    def get_edge_hashes(self, current_block, visited_blocks=None):
+        hashes = []
+
+        if current_block == None:
+            return []
+
+        # Reset visited blocks on first call
+        if visited_blocks == None:
+            visited_blocks = []
+
+        # for parent in current_block.parents:
+        #     hashes.append("{}{}".format(current_block.instructions[0].opcode, parent.instructions[-1].opcode))
+        block_instructions = list(current_block.instructions.values())
+        visited_blocks.append(current_block)
+
+        if current_block.jump is not None and current_block.jump not in visited_blocks:
+            jump_instructions = list(current_block.jump.instructions.values())
+
+            hashes.append("{}{}".format(block_instructions[-1].opcode, jump_instructions[0].opcode))
+            hashes.extend(self.get_edge_hashes(current_block.jump, visited_blocks))
+
+        if current_block.fail is not None and current_block.fail not in visited_blocks:
+            fail_instructions = list(current_block.fail.instructions.values())
+
+            hashes.append("{}{}".format(block_instructions[-1].opcode, fail_instructions[0].opcode))
+            hashes.extend(self.get_edge_hashes(current_block.fail, visited_blocks))
 
         return hashes
 
@@ -497,7 +527,7 @@ class Cluster:
                         cfg = Cfg(json.loads(
                             str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
                         ))
-                        control_hashes = cfg.get_hashes(cfg.first)
+                        control_hashes = cfg.get_opcode_hashes(cfg.first)
 
                     highest_jaccard = 0
                     chosen_fcn = None
@@ -510,7 +540,6 @@ class Cluster:
                             highest_jaccard = value
                             chosen_fcn = test_fcn
                     matches[bin.filename].append({sensor_fcn: chosen_fcn})
-                    # print('{} {} - {}', bin.filename, sensor_fcn.base_addr, chosen_fcn.base_addr)
             r2.quit()
 
         self.fcn_matches = matches
@@ -572,7 +601,7 @@ class Cluster:
             for sensor, matches in sensor_matches.items():
                 if matches:
                     highest_addr = max(matches.items(), key=operator.itemgetter(1))[0]
-                    self.sensor_matches[filename][sensor] = highest_addr
+                    self.sensor_matches[filename][sensor] = "{} - {}".format(highest_addr, matches[highest_addr])
 
     def print_fcn_matches(self):
         """
@@ -613,7 +642,7 @@ def jaccard_index(list_1, list_2):
         return 0
     return float(intersection / union)
 
-def cluster_bins(bins):
+def cluster_bins(bins, method):
     """
     Cluster binaries through Hierarchical Clustering
     :param bins: List of all bins to split into clusters
@@ -628,7 +657,8 @@ def cluster_bins(bins):
         col = 0
 
         for ecu_2 in bins.values():
-            matrix[row][col] = jaccard_index(ecu_1.rvector_hashes, ecu_2.rvector_hashes)
+            hashes_1, hashes_2 = get_hashes(ecu_1, ecu_2, method)
+            matrix[row][col] = jaccard_index(hashes_1, hashes_2)
             col += 1
         row += 1
 
@@ -645,6 +675,25 @@ def cluster_bins(bins):
         clusters[ac_clusters[i]].append(bins[index])
 
     return clusters
+
+def get_hashes(ecu_1, ecu_2, method):
+    """
+    Helper to get bin hashes for a specific method type
+    :param ecu_1, ecu_2: EcuFile instances to get cluster hashes for
+    :param method: String of which method to use for gathering hashes
+    """
+    hashes_1 = []
+    hashes_2 = []
+
+    if method == 'cfg':
+        hashes_1 = ecu_1.rvector_cfg.get_opcode_hashes(ecu_1.rvector_cfg.first)
+        hashes_2 = ecu_2.rvector_cfg.get_opcode_hashes(ecu_2.rvector_cfg.first)
+
+    elif method == 'edge':
+        hashes_1 = ecu_1.rvector_cfg.get_edge_hashes(ecu_1.rvector_cfg.first)
+        hashes_2 = ecu_2.rvector_cfg.get_edge_hashes(ecu_2.rvector_cfg.first)
+
+    return hashes_1, hashes_2
 
 def setup_r2(file_path):
     """
@@ -671,14 +720,14 @@ def analyze_bins():
 
     return bins
 
-def build_clusters(bins):
+def build_clusters(bins, method):
     """
     Builds Cluster instances from grouped binaries
     :param bins: List of EcuFile instances
     """
     clusters = []
 
-    for num, clustered_bins in cluster_bins(bins).items():
+    for num, clustered_bins in cluster_bins(bins, method).items():
         if len(clustered_bins) >= 3:
             cluster = Cluster(clustered_bins)
             clusters.append(cluster)
@@ -761,11 +810,19 @@ def write_clusters(clusters):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Cluster M7700 binaries & find sensor addresses')
     parser.add_argument('-s', action='store_true', help='simplify sensor findings output')
+    parser.add_argument('-e', action='store_true', dest='edge', help='')
+    parser.add_argument('-c', action='store_true', dest='cfg', help='')
     args = parser.parse_args()
+
+    method = 'cfg'
+    for arg, value in vars(args).items():
+        if value and arg is not 's':
+            method = arg
 
     bins = analyze_bins()
 
-    clusters = build_clusters(bins)
+    print('Building clusters using method \'{}\''.format(method))
+    clusters = build_clusters(bins, method)
     set_cluster_controls(clusters)
     analyze_functions(bins)
 
