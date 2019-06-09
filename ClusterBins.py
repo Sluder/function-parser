@@ -288,6 +288,10 @@ class Cfg:
         return hashes
 
     def get_edge_hashes(self, current_block, visited_blocks=None):
+        """
+        :param current_block: Current block to build hashes for
+        :param vistited_list: List of Block instances already visited
+        """
         hashes = []
 
         if current_block == None:
@@ -297,8 +301,6 @@ class Cfg:
         if visited_blocks == None:
             visited_blocks = []
 
-        # for parent in current_block.parents:
-        #     hashes.append("{}{}".format(current_block.instructions[0].opcode, parent.instructions[-1].opcode))
         block_instructions = list(current_block.instructions.values())
         visited_blocks.append(current_block)
 
@@ -313,6 +315,32 @@ class Cfg:
 
             hashes.append("{}{}".format(block_instructions[-1].opcode, fail_instructions[0].opcode))
             hashes.extend(self.get_edge_hashes(current_block.fail, visited_blocks))
+
+        return hashes
+
+    def get_bottleneck_hashes(self, current_block, visited_blocks=None):
+        """
+        :param current_block: Current block to build hashes for
+        :param vistited_list: List of Block instances already visited
+        """
+        hashes = []
+
+        if current_block == None:
+            return []
+
+        # Reset visited blocks on first call
+        if visited_blocks == None:
+            visited_blocks = []
+
+        if len(current_block.parents) >= 4:
+            hashes.append(current_block.get_opcodes())
+        visited_blocks.append(current_block)
+
+        if current_block.jump is not None and current_block.jump not in visited_blocks:
+            hashes.extend(self.get_bottleneck_hashes(current_block.jump, visited_blocks))
+
+        if current_block.fail is not None and current_block.fail not in visited_blocks:
+            hashes.extend(self.get_bottleneck_hashes(current_block.fail, visited_blocks))
 
         return hashes
 
@@ -405,9 +433,7 @@ class EcuFile:
 
         # Get 1000 instructions due to radare2 stopping too early with analysis
         # Fix was to use command 'afu' to resize function after finding main loop
-        instructions = json.loads(
-            str(r2.cmd('pdj 1000'), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
-        )
+        instructions = load_json(str(r2.cmd('pdj 1000'), 'ISO-8859-1'))
         calls = []
         stores = 0
         watch = False
@@ -440,10 +466,9 @@ class EcuFile:
         Grab reset vector blocks
         :param r2: radare2 instance
         """
-        self.rvector_cfg = Cfg(json.loads(
-            str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
-        ))
+        self.rvector_cfg = Cfg(load_json((str(r2.cmd("agj"), 'ISO-8859-1'))))
         hashes = []
+
         for offset, pair in self.rvector_cfg.blocks.items():
             hashes.append(pair[0].get_opcodes())
         self.rvector_hashes = hashes
@@ -461,9 +486,7 @@ class EcuFile:
 
         r2.cmd("s 0x{}".format(self.healthcheck))
         r2.cmd("aa")
-        self.healthcheck_cfg = Cfg(json.loads(
-            str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
-        ))
+        self.healthcheck_cfg = Cfg(load_json(str(r2.cmd("agj"), 'ISO-8859-1')))
 
         instructions = []
         for offset, pair in self.healthcheck_cfg.blocks.items():
@@ -484,9 +507,7 @@ class EcuFile:
             for function in functions:
                 r2.cmd("s {}".format(function))
                 r2.cmd("aa")
-                self.sensors[sensor].append(Function(function, Cfg(json.loads(
-                    str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
-                ))))
+                self.sensors[sensor].append(Function(function, Cfg(load_json(str(r2.cmd("agj"), 'ISO-8859-1')))))
 
 
 class Cluster:
@@ -517,21 +538,24 @@ class Cluster:
                     control_bin = bins[self.control.filename]
                     sensor_fcn.sensor = sensor
 
-                    # Get hashes of CFG if the functions file didnt have it
-                    if sensor_fcn.base_addr in control_bin.functions.keys():
-                        control_hashes = control_bin.functions[sensor_fcn.base_addr].hashes
-                    else:
-                        r2.cmd("s {}".format(sensor_fcn.base_addr))
-                        r2.cmd('aa')
+                    r2_control = setup_r2("{}/{}".format(BIN_DIR, self.control.filename))
+                    r2_control.cmd("s {}".format(sensor_fcn.base_addr))
+                    r2_control.cmd('aa')
+                    r2_control.cmd('sf.')
 
-                        cfg = Cfg(json.loads(
-                            str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
-                        ))
-                        control_hashes = cfg.get_opcode_hashes(cfg.first)
+                    cfg = Cfg(load_json(str(r2_control.cmd("agj"), 'ISO-8859-1')))
+                    control_hashes = cfg.get_opcode_hashes(cfg.first)
+                    r2_control.quit()
 
-                    highest_jaccard = 0
-                    chosen_fcn = None
+                    # Set default chosen function
+                    r2.cmd("s {}".format(sensor_fcn.base_addr))
+                    r2.cmd('aa')
+                    r2.cmd('sf.')
+                    chosen_fcn = Function(sensor_fcn.base_addr, Cfg(load_json(
+                        str(r2.cmd("agj"), 'ISO-8859-1')
+                    )))
 
+                    highest_jaccard = jaccard_index(control_hashes, chosen_fcn.cfg.get_opcode_hashes(chosen_fcn.cfg.first))
                     # Test all functions against the control function
                     for test_fcn in bin.functions.values():
                         value = jaccard_index(control_hashes, test_fcn.hashes)
@@ -539,7 +563,14 @@ class Cluster:
                         if value > highest_jaccard:
                             highest_jaccard = value
                             chosen_fcn = test_fcn
+
                     matches[bin.filename].append({sensor_fcn: chosen_fcn})
+
+                    if chosen_fcn:
+                        pass
+                        print('\t{} - {} {}'.format(sensor_fcn.base_addr, chosen_fcn.base_addr, round(highest_jaccard, 2)))
+                    else:
+                        print('\t{} - {}'.format(sensor_fcn.base_addr, 'None'))
             r2.quit()
 
         self.fcn_matches = matches
@@ -568,6 +599,9 @@ class Cluster:
                 for control_fcn, matched_fcn in match.items():
                     sensor_addr = self.sensors[control_fcn.sensor]
 
+                    if sensor_addr not in matches[filename][control_fcn.sensor]:
+                        matches[filename][control_fcn.sensor][sensor_addr] = {}
+
                     if matched_fcn == None:
                         continue
 
@@ -587,8 +621,13 @@ class Cluster:
                         except:
                             average = 0
 
-                        matches[filename][control_fcn.sensor][addr] = round(average, 2)
+                        if addr not in matches[filename][control_fcn.sensor][sensor_addr]:
+                            matches[filename][control_fcn.sensor][sensor_addr][addr] = round(average, 2)
+                        else:
+                            average_value = (matches[filename][control_fcn.sensor][sensor_addr][addr] + average) / 2
+                            matches[filename][control_fcn.sensor][sensor_addr][addr] = round(average_value, 2)
         self.sensor_matches = matches
+        self.results = matches.copy()
 
         if should_simplify:
             self.cleanup_sensor_matches()
@@ -597,11 +636,19 @@ class Cluster:
         """
         Helper to simplify sensor matches JSON
         """
-        for filename, sensor_matches in self.sensor_matches.items():
-            for sensor, matches in sensor_matches.items():
-                if matches:
-                    highest_addr = max(matches.items(), key=operator.itemgetter(1))[0]
-                    self.sensor_matches[filename][sensor] = "{} - {}".format(highest_addr, matches[highest_addr])
+        for filename, sensors in self.sensor_matches.items():
+            self.results[filename] = {}
+            correct = 0
+
+            for sensor, ground_truths in sensors.items():
+                for sensor_addr, guesses in ground_truths.items():
+                    highest_addr = max(guesses.items(), key=operator.itemgetter(1))[0]
+                    self.results[filename]['{} ({})'.format(sensor, sensor_addr)] = "{} - {}".format(highest_addr, guesses[highest_addr])
+
+                    if highest_addr == sensor_addr:
+                        correct += 1
+
+            self.results['{} {}%'.format(filename, round((correct / len(sensors.keys())) * 100, 2))] = self.results.pop(filename)
 
     def print_fcn_matches(self):
         """
@@ -612,7 +659,10 @@ class Cluster:
 
             for match in fcn_matches:
                 for control_fcn, match_fcn in match.items():
-                    print("\t{} - {}".format(control_fcn.base_addr, match_fcn.base_addr))
+                    if match_fcn:
+                        print("\t{} - {}".format(control_fcn.base_addr, match_fcn.base_addr))
+                    else:
+                        print("\t{} - {}".format(control_fcn.base_addr, 'None'))
 
     def __str__(self):
         ret = "Cluster {}\n".format(self.id)
@@ -678,7 +728,7 @@ def cluster_bins(bins, method):
 
 def get_hashes(ecu_1, ecu_2, method):
     """
-    Helper to get bin hashes for a specific method type
+    Helper to get reset vector hashes for a specific method type
     :param ecu_1, ecu_2: EcuFile instances to get cluster hashes for
     :param method: String of which method to use for gathering hashes
     """
@@ -692,6 +742,10 @@ def get_hashes(ecu_1, ecu_2, method):
     elif method == 'edge':
         hashes_1 = ecu_1.rvector_cfg.get_edge_hashes(ecu_1.rvector_cfg.first)
         hashes_2 = ecu_2.rvector_cfg.get_edge_hashes(ecu_2.rvector_cfg.first)
+
+    elif method == 'bottleneck':
+        hashes_1 = ecu_1.rvector_cfg.get_bottleneck_hashes(ecu_1.rvector_cfg.first)
+        hashes_2 = ecu_2.rvector_cfg.get_bottleneck_hashes(ecu_2.rvector_cfg.first)
 
     return hashes_1, hashes_2
 
@@ -707,6 +761,26 @@ def setup_r2(file_path):
     r2.cmd('e anal.to=0xffd0')
 
     return r2
+
+def load_json(json_str):
+    result = None
+
+    if json_str:
+        json_str = json_str.replace("'", "\"").replace('\"\"', '0').replace("\"esil\": \"re\"", "\"re\"")
+        try:
+            result = json.loads(json_str, strict=False, object_pairs_hook=OrderedDict)
+        except ValueError as e:
+        #     try:
+        #         json_str = list(json_str)
+        #         json_str[e.pos] = ''
+        #         new_json = ''.join(json_str)
+        #     except SONDecodeError as a:
+                with open("test.json", "w") as outfile:
+                    return []
+        #
+        #     return load_json(new_json)
+
+    return result
 
 def analyze_bins():
     """
@@ -780,9 +854,7 @@ def analyze_functions(bins):
                 r2.cmd("s {}".format(function))
                 r2.cmd('aa')
 
-                fcn = Function(function, Cfg(json.loads(
-                    str(r2.cmd("agj"), 'ISO-8859-1'), strict=False, object_pairs_hook=OrderedDict
-                )))
+                fcn = Function(function, Cfg(load_json(str(r2.cmd("agj"), 'ISO-8859-1'))))
 
                 hashes = hashes[1:-1].split(',')
                 hashes = [x.replace('\'', '') for x in hashes]
@@ -802,7 +874,7 @@ def write_clusters(clusters):
         results = {}
 
         for cluster in clusters:
-            results["Cluster {}".format(cluster.id)] = cluster.sensor_matches
+            results["Cluster {}".format(cluster.id)] = cluster.results
 
         json.dump(results, outfile, indent=4)
         print("Write results to cluster_matches.json")
@@ -810,8 +882,9 @@ def write_clusters(clusters):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Cluster M7700 binaries & find sensor addresses')
     parser.add_argument('-s', action='store_true', help='simplify sensor findings output')
-    parser.add_argument('-e', action='store_true', dest='edge', help='')
-    parser.add_argument('-c', action='store_true', dest='cfg', help='')
+    parser.add_argument('-e', action='store_true', dest='edge', help='cluster bins using reset vector block edges')
+    parser.add_argument('-c', action='store_true', dest='cfg', help='cluster bins using reset vector CFG\'s')
+    parser.add_argument('-b', action='store_true', dest='bottleneck', help='cluster bins using reset vector bottleneck blocks')
     args = parser.parse_args()
 
     method = 'cfg'
