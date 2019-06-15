@@ -76,17 +76,6 @@
             "throttle_position (0x128c)": "0x128c - 1.0",
             "knock_correction (0x12a7)": "0x12a7 - 1.0",
             "correct": "100.0%"
-        },
-        "722525-1992-USDM-SVX-EG33.bin": {
-            "batt_voltage (0x102f)": "0x102f - 0.97",
-            "vehicle_speed (0x1071)": "0x1071 - 0.98",
-            "engine_speed (0x106f)": "0x106f - 1.0",
-            "water_temp (0x1185)": "0x1185 - 0.97",
-            "ignition_timing (0x10a2)": "0x10a2 - 1.0",
-            "airflow (0x1283)": "0x1283 - 0.74",
-            "throttle_position (0x128c)": "0x128c - 1.0",
-            "knock_correction (0x12a7)": "0x12a7 - 1.0",
-            "correct": "100.0%"
         }
     },
     "Cluster 2": {
@@ -108,9 +97,9 @@
             "water_temp (0x11a2)": "0x11a2 - 1.0",
             "ignition_timing (0x109e)": "0x109e - 1.0",
             "airflow (0x1307)": "0x1307 - 1.0",
-            "throttle_position (0x1329)": "0x105e - 0.21",
+            "throttle_position (0x1329)": "0x1329 - 1.0",
             "knock_correction (0x1328)": "0x1328 - 1.0",
-            "correct": "87.5%"
+            "correct": "100.0%"
         },
         "74401A-1995-JDM-WrxRA-EJ20T.bin": {
             "batt_voltage (0x1170)": "0x1170 - 1.0",
@@ -126,7 +115,7 @@
     },
     "Cluster 3": {
         "733257-1993-Canada-Legacy-EJ22.bin": {
-            "batt_voltage (0x116b)": "0x116b - 1.0",
+            "batt_voltage (0x1170)": "0x1255 - 0.0",
             "vehicle_speed (0x1075)": "0x1075 - 1.0",
             "engine_speed (0x1073)": "0x1073 - 1.0",
             "water_temp (0x11a9)": "0x11a9 - 1.0",
@@ -134,10 +123,10 @@
             "airflow (0x1307)": "0x1307 - 1.0",
             "throttle_position (0x1329)": "0x1329 - 0.97",
             "knock_correction (0x1328)": "0x1328 - 1.0",
-            "correct": "100.0%"
+            "correct": "87.5%"
         },
         "7232A5-1992-UK-Legacy-EJ22.bin": {
-            "batt_voltage (0x116b)": "0x1170 - 0.82",
+            "batt_voltage (0x1170)": "0x1255 - 0.0",
             "vehicle_speed (0x1075)": "0x1075 - 0.97",
             "engine_speed (0x1073)": "0x11a2 - 0.96",
             "water_temp (0x11a9)": "0x11b0 - 1.0",
@@ -148,7 +137,7 @@
             "correct": "62.5%"
         },
         "7432A1-1996-UKDM-Legacy-EJ22.bin": {
-            "batt_voltage (0x116b)": "0x116c - 0.89",
+            "batt_voltage (0x1170)": "0x1051 - 0.0",
             "vehicle_speed (0x1075)": "0x1071 - 0.98",
             "engine_speed (0x1073)": "0x119c - 0.96",
             "water_temp (0x11a9)": "0x11aa - 0.96",
@@ -159,7 +148,18 @@
             "correct": "37.5%"
         },
         "7237A2-1992-EDM-Legacy-EJ20.bin": {
-            "batt_voltage (0x116b)": "0x1170 - 0.82",
+            "batt_voltage (0x1170)": "0x1255 - 0.0",
+            "vehicle_speed (0x1075)": "0x1075 - 0.97",
+            "engine_speed (0x1073)": "0x11a2 - 0.96",
+            "water_temp (0x11a9)": "0x11b0 - 1.0",
+            "ignition_timing (0x109e)": "0x109e - 1.0",
+            "airflow (0x1307)": "0x1307 - 0.61",
+            "throttle_position (0x1329)": "0x1329 - 0.66",
+            "knock_correction (0x1328)": "0x1328 - 1.0",
+            "correct": "62.5%"
+        },
+        "7237A5-1992-EDM-Legacy-EJ20.bin": {
+            "batt_voltage (0x1170)": "0x1255 - 0.0",
             "vehicle_speed (0x1075)": "0x1075 - 0.97",
             "engine_speed (0x1073)": "0x11a2 - 0.96",
             "water_temp (0x11a9)": "0x11b0 - 1.0",

@@ -58,7 +58,7 @@
 			"knock_correction": ["0xb510"]
 		},
 		"sensors": {
-			"batt_voltage": "0x116b",
+			"batt_voltage": "0x1170",
 			"vehicle_speed": "0x1075",
 			"engine_speed": "0x1073",
 			"water_temp": "0x11a9",
