@@ -12,7 +12,7 @@ from collections import OrderedDict, Counter
 from sklearn.cluster import AgglomerativeClustering
 from itertools import count
 
-# Full path to bin directory
+# Full path to binary directory
 BIN_DIR = './bins'
 
 class Instruction:
@@ -37,9 +37,9 @@ class Block:
 
         # Create instructions for ones in this block
         for inst in instruction_js:
-            self.instructions[inst['offset']] = Instruction(inst['offset'], inst['opcode'])
+            self.instructions[inst['offset']] = Instruction(inst['offset'], inst['disasm'])
 
-    def get_opcodes(self, should_hash=True):
+    def get_opcodes(self, should_hash=False):
         """
         String representation of block instructions
         :param should_hash: Whether opcodes should be MD5 hashed
@@ -148,6 +148,7 @@ class Cfg:
         """
         self.json = fcn_json[0] if fcn_json else ""
         self.first = None
+        self.blocks = {}
 
         if 'offset' in self.json:
             self.base_addr = hex(self.json['offset'])
@@ -361,7 +362,7 @@ class Function:
         :param base_addr: Address of function
         :param cfg: CFG json pulled from radare2
         """
-        self.base_addr = base_addr
+        self.base_addr = base_addr.strip()
         self.children = {}
         self.parents = {}
         self.cfg = cfg
@@ -392,6 +393,7 @@ class EcuFile:
         self.name = name[0][4:] + '-' + name[1][2:] + '-' + name[4].split('.')[0]
 
         r2 = setup_r2("./bins/{}".format(filename))
+        r2.cmd('aaa')
 
         self.get_rom_start(r2)
         self.get_rvector_location(r2)
@@ -402,6 +404,8 @@ class EcuFile:
         # Only called if this bin is the control for a cluster
         if sensor_functions:
             self.load_sensors(r2, sensor_functions)
+
+        r2.quit()
 
     def get_rom_start(self, r2):
         """
@@ -506,8 +510,10 @@ class EcuFile:
 
             for function in functions:
                 r2.cmd("s {}".format(function))
-                r2.cmd("aa")
-                self.sensors[sensor].append(Function(function, Cfg(load_json(str(r2.cmd("agj"), 'ISO-8859-1')))))
+                r2.cmd("aa; sf.")
+                corrected_addr = str(r2.cmd("s"), 'ISO-8859-1').strip()
+
+                self.sensors[sensor].append(Function(corrected_addr, Cfg(load_json(str(r2.cmd("agj"), 'ISO-8859-1')))))
 
 
 class Cluster:
@@ -526,39 +532,33 @@ class Cluster:
         :param bins: List of all bins. Used for gathering feature hashes
         """
         matches = {}
+        control_bin = bins[self.control.filename]
 
         for bin in self.bins:
             print("Matching functions for {}".format(bin.filename))
             matches[bin.filename] = []
 
             r2 = setup_r2("{}/{}".format(BIN_DIR, bin.filename))
+            r2.cmd('aaa')
 
             for sensor, sensor_fcns in self.control.sensors.items():
                 for sensor_fcn in sensor_fcns:
-                    control_bin = bins[self.control.filename]
                     sensor_fcn.sensor = sensor
 
-                    r2_control = setup_r2("{}/{}".format(BIN_DIR, self.control.filename))
-                    r2_control.cmd("s {}".format(sensor_fcn.base_addr))
-                    r2_control.cmd('aa')
-                    r2_control.cmd('sf.')
-
-                    cfg = Cfg(load_json(str(r2_control.cmd("agj"), 'ISO-8859-1')))
-                    control_hashes = cfg.get_opcode_hashes(cfg.first)
-                    r2_control.quit()
+                    control_hashes = sensor_fcn.cfg.get_opcode_hashes(sensor_fcn.cfg.first)
 
                     # Set default chosen function
                     r2.cmd("s {}".format(sensor_fcn.base_addr))
                     r2.cmd('aa')
-                    r2.cmd('sf.')
-                    chosen_fcn = Function(sensor_fcn.base_addr, Cfg(load_json(
+                    chosen_fcn = Function(str(r2.cmd("s"), 'ISO-8859-1').strip(), Cfg(load_json(
                         str(r2.cmd("agj"), 'ISO-8859-1')
                     )))
 
                     highest_jaccard = jaccard_index(control_hashes, chosen_fcn.cfg.get_opcode_hashes(chosen_fcn.cfg.first))
+
                     # Test all functions against the control function
                     for test_fcn in bin.functions.values():
-                        value = jaccard_index(control_hashes, test_fcn.hashes)
+                        value = jaccard_index(control_hashes, test_fcn.cfg.get_opcode_hashes(test_fcn.cfg.first))
 
                         if value > highest_jaccard:
                             highest_jaccard = value
@@ -567,7 +567,6 @@ class Cluster:
                     matches[bin.filename].append({sensor_fcn: chosen_fcn})
 
                     if chosen_fcn:
-                        pass
                         print('\t{} - {} {}'.format(sensor_fcn.base_addr, chosen_fcn.base_addr, round(highest_jaccard, 2)))
                     else:
                         print('\t{} - {}'.format(sensor_fcn.base_addr, 'None'))
@@ -634,7 +633,7 @@ class Cluster:
 
     def cleanup_sensor_matches(self):
         """
-        Helper to simplify sensor matches JSON
+        Helper to simplify sensor matches JSON. Finds best sensor matches for each bin
         """
         for filename, sensors in self.sensor_matches.items():
             self.results[filename] = {}
@@ -642,13 +641,14 @@ class Cluster:
 
             for sensor, ground_truths in sensors.items():
                 for sensor_addr, guesses in ground_truths.items():
-                    highest_addr = max(guesses.items(), key=operator.itemgetter(1))[0]
-                    self.results[filename]['{} ({})'.format(sensor, sensor_addr)] = "{} - {}".format(highest_addr, guesses[highest_addr])
+                    if guesses:
+                        highest_addr = max(guesses.items(), key=operator.itemgetter(1))[0]
+                        self.results[filename]['{} ({})'.format(sensor, sensor_addr)] = "{} - {}".format(highest_addr, guesses[highest_addr])
 
-                    if highest_addr == sensor_addr:
-                        correct += 1
+                        if highest_addr == sensor_addr:
+                            correct += 1
 
-            self.results['{} {}%'.format(filename, round((correct / len(sensors.keys())) * 100, 2))] = self.results.pop(filename)
+            self.results[filename]['correct'] = "{}%".format(round((correct / len(sensors.keys())) * 100, 2))
 
     def print_fcn_matches(self):
         """
@@ -714,7 +714,7 @@ def cluster_bins(bins, method):
 
     # Hierarchical Clustering
     ac_clusters = AgglomerativeClustering(
-        n_clusters=None, compute_full_tree=True, distance_threshold=0.8, linkage='single'
+        n_clusters=None, compute_full_tree=True, distance_threshold=0.9, linkage='single'
     ).fit(matrix).labels_
 
     # Split bins into found clusters
@@ -754,7 +754,7 @@ def setup_r2(file_path):
     radare2 helper for M7700 setup
     :param file_path: Full path of binary to load
     """
-    r2 = r2pipe.open(file_path)
+    r2 = r2pipe.open(file_path, ['-2'])
     r2.cmd('e asm.arch=m7700')
     r2.cmd('e anal.limits=true')
     r2.cmd('e anal.from=0x8000')
@@ -763,22 +763,18 @@ def setup_r2(file_path):
     return r2
 
 def load_json(json_str):
+    """
+    Helper to load JSON. radare randomly returns bad JSON, so catch it here
+    """
     result = None
 
     if json_str:
         json_str = json_str.replace("'", "\"").replace('\"\"', '0').replace("\"esil\": \"re\"", "\"re\"")
+
         try:
             result = json.loads(json_str, strict=False, object_pairs_hook=OrderedDict)
-        except ValueError as e:
-        #     try:
-        #         json_str = list(json_str)
-        #         json_str[e.pos] = ''
-        #         new_json = ''.join(json_str)
-        #     except SONDecodeError as a:
-                with open("test.json", "w") as outfile:
-                    return []
-        #
-        #     return load_json(new_json)
+        except Exception as e:
+            return []
 
     return result
 
@@ -789,7 +785,10 @@ def analyze_bins():
     bins = {}
 
     for filename in os.listdir(BIN_DIR):
-        bins[filename] = EcuFile(filename, setup_r2("{}/{}".format(BIN_DIR, filename)))
+        r2 = setup_r2("{}/{}".format(BIN_DIR, filename))
+        r2.cmd('aaa')
+        bins[filename] = EcuFile(filename, r2)
+
         print("Loaded {}".format(filename))
 
     return bins
@@ -802,6 +801,7 @@ def build_clusters(bins, method):
     clusters = []
 
     for num, clustered_bins in cluster_bins(bins, method).items():
+        # Filtering to larger clusters
         if len(clustered_bins) >= 3:
             cluster = Cluster(clustered_bins)
             clusters.append(cluster)
@@ -825,9 +825,10 @@ def set_cluster_controls(clusters):
             for cluster in clusters:
                 if any(x for x in cluster.bins if engine in x.name):
                     cluster.sensors = params["sensors"]
-                    cluster.control = EcuFile(
-                        control_filename, setup_r2("{}/{}".format(BIN_DIR, control_filename)), params["sensor_functions"]
-                    )
+                    r2 = setup_r2("{}/{}".format(BIN_DIR, control_filename))
+                    r2.cmd('aaa')
+
+                    cluster.control = EcuFile(control_filename, r2, params["sensor_functions"])
                     print("Set {} as control for Cluster {}".format(cluster.control.name, cluster.id))
 
 def analyze_functions(bins):
@@ -845,6 +846,7 @@ def analyze_functions(bins):
             bins[filename].functions = {}
 
             r2 = setup_r2("{}/{}".format(BIN_DIR, filename))
+            r2.cmd('aaa')
 
             # Analyze all functions for each file
             for function, hashes in function_list.items():
@@ -852,16 +854,16 @@ def analyze_functions(bins):
                     continue
 
                 r2.cmd("s {}".format(function))
-                r2.cmd('aa')
-
-                fcn = Function(function, Cfg(load_json(str(r2.cmd("agj"), 'ISO-8859-1'))))
+                r2.cmd('aa; sf.')
+                corrected_addr = str(r2.cmd("s"), 'ISO-8859-1')
+                fcn = Function(corrected_addr, Cfg(load_json(str(r2.cmd("agj"), 'ISO-8859-1'))))
 
                 hashes = hashes[1:-1].split(',')
                 hashes = [x.replace('\'', '') for x in hashes]
                 hashes = [x.strip(' ') for x in hashes]
                 fcn.hashes = hashes
 
-                bins[filename].functions[function] = fcn
+                bins[filename].functions[corrected_addr] = fcn
             r2.quit()
             print("Loaded functions for {}".format(filename))
 
@@ -887,6 +889,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', action='store_true', dest='bottleneck', help='cluster bins using reset vector bottleneck blocks')
     args = parser.parse_args()
 
+    # Set clustering method from argument
     method = 'cfg'
     for arg, value in vars(args).items():
         if value and arg is not 's':
@@ -894,7 +897,7 @@ if __name__ == '__main__':
 
     bins = analyze_bins()
 
-    print('Building clusters using method \'{}\''.format(method))
+    print('Building clusters using \'{}\' features'.format(method))
     clusters = build_clusters(bins, method)
     set_cluster_controls(clusters)
     analyze_functions(bins)
